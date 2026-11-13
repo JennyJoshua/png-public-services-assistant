@@ -166,15 +166,36 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
         if is_business_question and any(term in source_text for term in ("registerbusinessname", "businessregulations", "prescribedforms")):
             source_boost += 8
 
+        is_ipa_page = "ipa.gov.pg" in source_text
         for passage in _passage_blocks(page["text"]):
-            if len(passage) < 35:
+            if len(passage) < 25:
                 continue
             passage_tokens = _tokens(passage)
             overlap = query_tokens & passage_tokens
-            if not overlap:
+
+            # A broad question such as "prerequisites of registering a business"
+            # does not name every field on the IPA checklist. Include individual
+            # IPA checklist bullets even when words like "owner" or "address"
+            # do not occur in the question itself.
+            business_requirement_terms = {
+                "proposed", "applicant", "owner", "owners", "address", "addresses",
+                "principal", "postal", "activity", "foreign", "investor",
+                "declaration", "directors", "shareholders", "constitution",
+                "reserve", "account", "company", "business",
+            }
+            business_requirement_overlap = passage_tokens & business_requirement_terms
+            is_ipa_requirement = (
+                is_business_question
+                and is_ipa_page
+                and bool(business_requirement_overlap)
+            )
+            if not overlap and not is_ipa_requirement:
                 continue
+
             score = sum(3 if token in passage.lower() else 1 for token in overlap)
             score += source_boost
+            if is_ipa_requirement:
+                score += 8 + min(len(business_requirement_overlap), 4) * 2
             # Prefer passages that explain an action, rather than generic mentions of an ID.
             if is_nid_question and any(term in passage.lower() for term in ("download", "lodge", "registration form", "fingerprint", "capture")):
                 score += 5

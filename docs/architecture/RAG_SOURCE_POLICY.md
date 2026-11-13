@@ -57,7 +57,7 @@ Add an institution only after verifying its official URL and relevance. Prioriti
 
 ## Current limitations
 - Retrieval checks only the exact seed URLs; it does not crawl linked subpages or maintain a persistent search index.
-- Keyword-overlap ranking is intentionally simple and may miss relevant passages or return weak matches.
+- Keyword-overlap ranking is intentionally simple. For broad IPA business-registration questions, the retriever supplements literal query overlap with a narrow, IPA-only checklist-field rule so separately extracted bullets for applicant, owners, addresses, business activity, foreign-investor declarations, company directors/shareholders, and constitution are not discarded merely because the user did not name each field. This is retrieval assistance, not an expansion of approved sources.
 - A source being listed does not guarantee that it is complete, current, or authoritative for every question.
 - No conversation or source-text persistence is implemented.
 - Document generation remains deferred until the owner supplies approved sample documents.
