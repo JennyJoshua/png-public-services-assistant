@@ -166,3 +166,95 @@ def test_identity_card_wording_uses_nid_retrieval_boost() -> None:
     assert results
     assert results[0]["source"]["institution"] == "Papua New Guinea Civil and Identity Registry"
     assert "Registration Form" in results[0]["text"]
+
+
+def test_ipa_business_registration_sources_are_curated() -> None:
+    ipa_urls = {source.url for source in SOURCES if source.institution == "Investment Promotion Authority"}
+    assert ipa_urls == {
+        "https://www.ipa.gov.pg/public/help.aspx?cn=BusinessRegulations",
+        "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
+        "https://www.ipa.gov.pg/public/prescribedforms.aspx?lang=en-US",
+        "https://www.ipa.gov.pg/public/help.aspx?cn=FormsForDownload",
+    }
+
+
+def test_business_registration_question_ranks_ipa_prerequisites() -> None:
+    pages = [{
+        "institution": "Investment Promotion Authority",
+        "title": "IPA — Business Name Registration and Company Incorporation Guide",
+        "url": "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": (
+            "Registering a business name requires up to three proposed names, "
+            "the applicant name and address, and the name and address of each owner.\n"
+            "Provide the principal place of business, additional business addresses, "
+            "a postal address and the primary business activity.\n"
+            "To incorporate a company, reserve the company name first and provide "
+            "directors, shareholders, company addresses and a company constitution."
+        ),
+    }, {
+        "institution": "PNG National Information Centre",
+        "title": "National Information Centre",
+        "url": "https://info.gov.pg/home/",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": "The government provides many public services and information to citizens.",
+    }]
+    results = _rank_passages("What are the prerequisites of registering a business?", pages)
+    assert results
+    assert results[0]["source"]["institution"] == "Investment Promotion Authority"
+    assert any("proposed names" in item["text"] for item in results)
+    assert all(item["source"]["institution"] == "Investment Promotion Authority" for item in results)
+
+
+def test_company_incorporation_question_ranks_company_requirements() -> None:
+    page = {
+        "institution": "Investment Promotion Authority",
+        "title": "IPA — Business Name Registration and Company Incorporation Guide",
+        "url": "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": (
+            "To incorporate a company, reserve the proposed company name and wait for approval.\n"
+            "Provide company contact details and addresses, directors, shareholders, "
+            "and upload the company constitution."
+        ),
+    }
+    results = _rank_passages("What do I need to incorporate a company?", [page])
+    assert results
+    assert any("directors, shareholders" in item["text"] for item in results)
+
+
+def test_page_text_extracts_fee_table_rows() -> None:
+    html = """
+    <html><body><main>
+      <table>
+        <tr><th>Form</th><th>Online Fee</th><th>Paper Fee</th></tr>
+        <tr><td>A-17</td><td>K150</td><td>K200</td></tr>
+      </table>
+    </main></body></html>
+    """
+    text, _ = _page_text(html)
+    assert "A-17 K150 K200" in text
+
+
+def test_nid_registration_does_not_trigger_ipa_business_boost() -> None:
+    pages = [{
+        "institution": "Papua New Guinea Civil and Identity Registry",
+        "title": "PNGCIR — NID Registration Information",
+        "url": "https://pngcir.gov.pg/nid-registration-information/",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": "Download the National Identity registration form and lodge it at the registry office for fingerprint capture.",
+    }, {
+        "institution": "Investment Promotion Authority",
+        "title": "IPA — Business Name Registration and Company Incorporation Guide",
+        "url": "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": "Registering a business name requires proposed names, owner details and business addresses.",
+    }]
+    results = _rank_passages("How do I apply for a National ID?", pages)
+    assert results
+    assert results[0]["source"]["institution"] == "Papua New Guinea Civil and Identity Registry"

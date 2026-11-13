@@ -41,6 +41,10 @@ def _query_tokens(question: str) -> set[str]:
     )
     if is_nid_wording:
         tokens.update({"nid", "national", "identity", "id", "card", "registration", "form"})
+    # Normalize common business-registration wording for the IPA guidance.
+    business_terms = {"business", "businesses", "company", "companies", "incorporation", "incorporate", "registering"}
+    if tokens & business_terms:
+        tokens.update({"business", "businesses", "name", "company", "companies", "registration", "register", "registering", "incorporation", "incorporate", "ipa"})
     return tokens
 
 
@@ -52,6 +56,10 @@ def _is_nid_question(query_tokens: set[str]) -> bool:
     )
 
 
+def _is_business_registration_question(query_tokens: set[str]) -> bool:
+    return bool(query_tokens & {"business", "businesses", "company", "companies", "incorporation", "incorporate"})
+
+
 def _page_text(html: str) -> tuple[str, str | None]:
     """Extract semantic content blocks without flattening lists into page-wide prose."""
     soup = BeautifulSoup(html, "html.parser")
@@ -61,7 +69,7 @@ def _page_text(html: str) -> tuple[str, str | None]:
 
     main = soup.find("main") or soup.find("article") or soup.body or soup
     blocks: list[str] = []
-    for element in main.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "dt", "dd"]):
+    for element in main.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "dt", "dd", "tr"]):
         # A paragraph nested in a list item is already represented by its parent list item.
         if element.name == "p" and element.find_parent("li"):
             continue
@@ -144,6 +152,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
         return []
 
     is_nid_question = _is_nid_question(query_tokens)
+    is_business_question = _is_business_registration_question(query_tokens)
     ranked: list[dict] = []
     for page in pages:
         source_text = f"{page.get('title', '')} {page.get('url', '')}".lower()
@@ -152,6 +161,10 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
             source_boost += 12
         if is_nid_question and ("nid-registration-information" in source_text or "registration information" in source_text):
             source_boost += 10
+        if is_business_question and "ipa.gov.pg" in source_text:
+            source_boost += 16
+        if is_business_question and any(term in source_text for term in ("registerbusinessname", "businessregulations", "prescribedforms")):
+            source_boost += 8
 
         for passage in _passage_blocks(page["text"]):
             if len(passage) < 35:
@@ -165,6 +178,8 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
             # Prefer passages that explain an action, rather than generic mentions of an ID.
             if is_nid_question and any(term in passage.lower() for term in ("download", "lodge", "registration form", "fingerprint", "capture")):
                 score += 5
+            if is_business_question and any(term in passage.lower() for term in ("proposed business name", "owners", "principal place of business", "directors", "shareholders", "company constitution", "client account")):
+                score += 6
             ranked.append({"score": score, "text": passage, "source": page})
 
     ranked.sort(key=lambda item: item["score"], reverse=True)
