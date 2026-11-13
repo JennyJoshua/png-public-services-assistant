@@ -127,3 +127,42 @@ def test_national_id_query_keeps_registration_form_and_in_person_capture_passage
     assert len(results) == 2
     assert "Registration Form" in results[0]["text"]
     assert "fingerprint and ID capture" in results[1]["text"]
+
+
+
+def test_nid_abbreviation_ranks_official_registration_instructions() -> None:
+    page = {
+        "institution": "Papua New Guinea Civil and Identity Registry",
+        "title": "PNGCIR — NID Registration Information",
+        "url": "https://pngcir.gov.pg/nid-registration-information/",
+        "publication_date": None,
+        "last_checked_at": "2026-11-13T00:00:00+00:00",
+        "text": (
+            "Normal registration: Download the Registration Form, fill in the details "
+            "and lodge it at your nearest Civil and Identity Registry Office.\\n"
+            "Full online registration is not possible because fingerprint and ID capture "
+            "must be completed in person."
+        ),
+    }
+    results = _rank_passages("How do I apply for an NID?", [page])
+    assert len(results) == 2
+    assert "Registration Form" in results[0]["text"]
+    assert "fingerprint and ID capture" in results[1]["text"]
+
+
+def test_identity_card_wording_uses_nid_retrieval_boost() -> None:
+    page = {
+        "institution": "Papua New Guinea Civil and Identity Registry",
+        "title": "PNGCIR — NID Registration Information",
+        "url": "https://pngcir.gov.pg/nid-registration-information/",
+        "publication_date": None,
+        "last_checked_at": "2026-11-13T00:00:00+00:00",
+        "text": (
+            "Normal registration: Download the Registration Form, fill in the details "
+            "and lodge it at your nearest Civil and Identity Registry Office."
+        ),
+    }
+    results = _rank_passages("How do I get an identity card?", [page])
+    assert results
+    assert results[0]["source"]["institution"] == "Papua New Guinea Civil and Identity Registry"
+    assert "Registration Form" in results[0]["text"]
