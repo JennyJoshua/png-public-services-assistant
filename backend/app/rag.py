@@ -168,7 +168,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
 
         is_ipa_page = "ipa.gov.pg" in source_text
         for passage in _passage_blocks(page["text"]):
-            if len(passage) < 35:
+            if len(passage) < 25:
                 continue
             passage_tokens = _tokens(passage)
             overlap = query_tokens & passage_tokens
