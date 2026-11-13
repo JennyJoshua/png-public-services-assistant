@@ -200,10 +200,10 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
             score += inverse_frequency * (frequency * (k1 + 1)) / denominator
         title_overlap = query_tokens & document["title_tokens"]
         score += 1.5 * len(title_overlap)
-        source_host = (urlparse(str(document["source"].get("url", ""))).hostname or "").lower()
-        if source_host.endswith(".gov.pg"):
-            score += 2.0
         if score > 0:
+            source_host = (urlparse(str(document["source"].get("url", ""))).hostname or "").lower()
+            if source_host.endswith(".gov.pg"):
+                score += 2.0
             ranked.append({**document, "score": score})
 
     if not ranked:
