@@ -1,6 +1,6 @@
 # Phase 1 Implementation Breakdown
 
-**Status:** Prepared on phase-1/foundation; implementation has not yet begun.
+**Status:** Active; WP0 and the first WP1 skeleton are committed on phase-1/foundation. CI validation is pending.
 **Baseline:** Specification PR #1 merged to main on 13 November 2026.
 **Scope:** Phase 1 public-information chat only.
 
