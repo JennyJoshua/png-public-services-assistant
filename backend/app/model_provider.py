@@ -1,7 +1,8 @@
 """Optional OpenAI-compatible chat-model adapter.
 
-The application does not require a provider to start. Configure a compatible
-provider only after selecting one and storing its API key as a server secret.
+Groq is the initial provider. The endpoint and model have safe defaults, while
+the key is always supplied as a private server-side secret. Other compatible
+providers can be selected later by overriding the endpoint and model.
 """
 import os
 
@@ -10,17 +11,25 @@ import httpx
 MAX_HISTORY_MESSAGES = 8
 MAX_EVIDENCE_CHARS = 7000
 MAX_ANSWER_CHARS = 12000
+DEFAULT_MODEL_API_BASE_URL = "https://api.groq.com/openai/v1"
+DEFAULT_MODEL_NAME = "openai/gpt-oss-20b"
 
 
 class ModelProviderError(RuntimeError):
     """Raised when a configured model provider cannot return a usable answer."""
 
 
-def model_is_configured() -> bool:
-    return all(
-        os.getenv(name, "").strip()
-        for name in ("MODEL_API_BASE_URL", "MODEL_API_KEY", "MODEL_NAME")
+def _provider_settings() -> tuple[str, str, str]:
+    return (
+        os.getenv("MODEL_API_BASE_URL", DEFAULT_MODEL_API_BASE_URL).strip().rstrip("/"),
+        os.getenv("MODEL_API_KEY", "").strip(),
+        os.getenv("MODEL_NAME", DEFAULT_MODEL_NAME).strip(),
     )
+
+
+def model_is_configured() -> bool:
+    base_url, api_key, model = _provider_settings()
+    return bool(base_url and api_key and model)
 
 
 def _build_messages(
@@ -77,12 +86,9 @@ async def generate_answer(
     history: list[dict] | None = None,
 ) -> str | None:
     """Generate an answer when a compatible provider has been configured."""
-    if not model_is_configured():
+    base_url, api_key, model = _provider_settings()
+    if not api_key:
         return None
-
-    base_url = os.environ["MODEL_API_BASE_URL"].strip().rstrip("/")
-    api_key = os.environ["MODEL_API_KEY"].strip()
-    model = os.environ["MODEL_NAME"].strip()
     if not base_url.startswith("https://"):
         raise ModelProviderError("The model provider URL must use HTTPS.")
 
