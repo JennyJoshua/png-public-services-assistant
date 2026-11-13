@@ -1,9 +1,4 @@
-"""Small, live-fetch retrieval prototype for curated PNG public sources.
-
-No content is persistently indexed. Each request fetches a bounded set of
-approved source pages, extracts relevant passages, and returns provenance.
-No generative model is used in this first free-tier slice.
-"""
+"""Live retrieval over curated PNG sources, with an optional grounded model layer."""
 import asyncio
 import re
 from datetime import datetime, timezone
@@ -12,6 +7,7 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
+from app.model_provider import ModelProviderError, generate_answer, model_is_configured
 from app.source_registry import SOURCES
 
 MAX_PAGE_BYTES = 1_500_000
@@ -96,11 +92,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
             if not overlap:
                 continue
             score = sum(2 if token in sentence.lower() else 1 for token in overlap)
-            ranked.append({
-                "score": score,
-                "text": sentence,
-                "source": page,
-            })
+            ranked.append({"score": score, "text": sentence, "source": page})
 
     ranked.sort(key=lambda item: item["score"], reverse=True)
     selected: list[dict] = []
@@ -116,29 +108,15 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
     return selected
 
 
-async def retrieve_answer(question: str) -> dict:
-    """Fetch approved sources and return extractive, citation-linked evidence."""
+async def retrieve_answer(question: str, history: list[dict] | None = None) -> dict:
+    """Fetch approved evidence, then optionally ask a model to compose the response."""
     timeout = httpx.Timeout(7.0, connect=4.0)
-    headers = {
-        "User-Agent": "PNGPublicServicesAssistant/0.1",
-        "Accept": "text/html",
-    }
+    headers = {"User-Agent": "PNGPublicServicesAssistant/0.2", "Accept": "text/html"}
     async with httpx.AsyncClient(timeout=timeout, headers=headers, follow_redirects=True) as client:
         pages = await asyncio.gather(*(_fetch_source(client, source) for source in SOURCES))
 
     available_pages = [page for page in pages if page]
     passages = _rank_passages(question, available_pages)
-    if not passages:
-        return {
-            "answer": (
-                "I could not find a sufficiently relevant passage in the currently "
-                "approved sources. I won't guess at official requirements. Please "
-                "check the responsible agency's website or contact its office."
-            ),
-            "citations": [],
-            "evidence": [],
-            "warnings": ["No relevant evidence was found in the current source set."],
-        }
 
     citations: list[dict] = []
     citation_indexes: dict[str, int] = {}
@@ -155,24 +133,52 @@ async def retrieve_answer(question: str) -> dict:
                 "publication_date": source["publication_date"],
                 "last_checked_at": source["last_checked_at"],
             })
-        evidence.append({
-            "text": passage["text"],
-            "citation_index": citation_indexes[url],
-        })
+        evidence.append({"text": passage["text"], "citation_index": citation_indexes[url]})
 
-    answer_lines = [
-        "I found these relevant passages in the approved PNG public-service sources:"
-    ]
-    for item in evidence:
-        answer_lines.append(f"- {item['text']} [{item['citation_index']}]")
-    answer_lines.append(
-        "These are source excerpts, not a confirmation that every requirement is current "
-        "or applies to your circumstances. Open the cited page and confirm important "
-        "details with the responsible institution."
-    )
+    warnings: list[str] = []
+    try:
+        answer = await generate_answer(question, evidence, history or [])
+    except ModelProviderError:
+        answer = None
+        warnings.append(
+            "The configured AI model is temporarily unavailable. The response below uses source excerpts instead."
+        )
+
+    if answer:
+        return {
+            "answer": answer,
+            "answer_mode": "model",
+            "citations": citations,
+            "evidence": evidence,
+            "warnings": warnings,
+        }
+
+    if not passages:
+        fallback = (
+            "I could not find a sufficiently relevant passage in the currently approved sources. "
+            "I won't guess at official requirements. Please check the responsible agency's website "
+            "or contact its office."
+        )
+    else:
+        answer_lines = [
+            "I found these relevant passages in the approved PNG public-service sources:"
+        ]
+        for item in evidence:
+            answer_lines.append(f"- {item['text']} [{item['citation_index']}]")
+        answer_lines.append(
+            "These are source excerpts, not confirmation that every requirement is current or applies "
+            "to your circumstances. Open the cited page and confirm important details with the institution."
+        )
+        fallback = "\n\n".join(answer_lines)
+
+    if not model_is_configured():
+        warnings.append(
+            "AI-generated answers are not enabled yet. This response is limited to retrieved source excerpts."
+        )
     return {
-        "answer": "\n\n".join(answer_lines),
+        "answer": fallback,
+        "answer_mode": "extractive",
         "citations": citations,
         "evidence": evidence,
-        "warnings": ["This first version retrieves and quotes source passages; it does not use an AI model to synthesize legal or procedural advice."],
+        "warnings": warnings,
     }
