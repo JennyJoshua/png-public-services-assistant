@@ -4,12 +4,11 @@ A mobile-first assistant designed to help people in Papua New Guinea find trustw
 
 ## Product direction
 
-The application will provide:
+The application provides a conversational interface for:
 - Evidence-grounded answers about PNG public services, procedures, eligibility, required documents, and responsible institutions.
+- General-knowledge answers for ordinary questions, clearly separated from official PNG guidance.
 - Source links and dates so users can check information themselves.
-- Conversational help understanding forms and preparing documents.
-- Document preview and user approval before export.
-- OCR and form-filling capabilities introduced in later phases.
+- Later: document generation from user-approved samples, preview, and DOCX/PDF export.
 
 ## Principles
 
@@ -23,14 +22,14 @@ The application will provide:
 
 ## Planned architecture
 
-The initial direction is a modular monolith with a Next.js/TypeScript frontend, a Python/FastAPI backend, and PostgreSQL. Retrieval will combine carefully sourced public information with indexed documents. Model, embedding, OCR, and storage integrations will sit behind replaceable adapters.
+The initial direction is a modular monolith with a Next.js/TypeScript frontend and a Python/FastAPI backend. Retrieval fetches a curated set of public PNG sources. An optional OpenAI-compatible model adapter composes conversational answers using bounded conversation history. Model credentials are server-side only.
 
-Specific technologies and hosting choices remain subject to compatibility, licensing, resource, and free-tier evaluation. No paid service is approved by this README.
+Specific provider and model choices remain subject to compatibility, licensing, resource, and free-tier evaluation. No paid service is approved by this README.
 
 ## Delivery phases
 
-1. Public-information chat, source management, retrieval, citations, and foundational security.
-2. Document upload, extraction, generation, preview, and DOCX/PDF export.
+1. Public-information chat, source management, retrieval, citations, model integration, and foundational security.
+2. Document upload, extraction, generation from approved samples, preview, and DOCX/PDF export.
 3. OCR and form understanding.
 4. Assisted form completion, validation, preview, and export/printing.
 5. Quality, security, performance, accessibility, and controlled release.
@@ -39,7 +38,7 @@ See the engineering specifications in `docs/` for requirements, architecture, AP
 
 ## Status
 
-Phase 1 foundation is under development on the phase-1/foundation branch. The current interface is a prototype and is not connected to verified public sources or an AI provider. No production deployment or paid service is authorized.
+The first source-retrieval slice is in draft PR #4. The hybrid model adapter and bounded conversation history are being developed in a follow-on feature branch. The model adapter is not active until a provider is selected and private credentials are configured. No merge or production deployment is implied by these development branches.
 
 ## License
 
