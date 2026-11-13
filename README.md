@@ -22,23 +22,25 @@ The application provides a conversational interface for:
 
 ## Planned architecture
 
-The initial direction is a modular monolith with a Next.js/TypeScript frontend and a Python/FastAPI backend. Retrieval fetches a curated set of public PNG sources. An optional OpenAI-compatible model adapter composes conversational answers using bounded conversation history. Model credentials are server-side only.
+The initial implementation uses a Next.js/TypeScript frontend and a Python/FastAPI backend. Retrieval fetches a small curated set of public PNG sources. An optional OpenAI-compatible model adapter composes conversational answers using bounded conversation history. Model credentials are server-side only.
 
-Specific provider and model choices remain subject to compatibility, licensing, resource, and free-tier evaluation. No paid service is approved by this README.
+The approved initial provider is Groq's free tier, using the OpenAI-compatible endpoint and the `openai/gpt-oss-20b` model. No paid plan or payment method is approved.
 
 ## Delivery phases
 
-1. Public-information chat, source management, retrieval, citations, model integration, and foundational security.
+1. Public-information chat, source retrieval, citations, model integration, and foundational security.
 2. Document upload, extraction, generation from approved samples, preview, and DOCX/PDF export.
 3. OCR and form understanding.
 4. Assisted form completion, validation, preview, and export/printing.
 5. Quality, security, performance, accessibility, and controlled release.
 
-See the engineering specifications in `docs/` for requirements, architecture, API contracts, security, and the Phase 1 plan.
+See the engineering specifications in `docs/` for requirements, architecture, API contracts, security, source policy, and model-provider policy.
 
 ## Status
 
-The first source-retrieval slice is in draft PR #4. The hybrid model adapter and bounded conversation history are being developed in a follow-on feature branch. The model adapter is not active until a provider is selected and private credentials are configured. No merge or production deployment is implied by these development branches.
+The source-retrieval and hybrid-model implementation is in draft PR #5. CI has passed for the latest feature-branch commit, including frontend typecheck, lint, production build, and backend tests. The Groq API key has been added as a private Render backend environment variable using Save Only; it will take effect after an approved deployment. PR #5 has not been merged, and production deployment has not been authorized.
+
+Document generation remains deferred until the owner uploads approved sample documents.
 
 ## License
 
