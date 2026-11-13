@@ -150,7 +150,7 @@ def test_nid_abbreviation_ranks_official_registration_instructions() -> None:
     assert "fingerprint and ID capture" in results[1]["text"]
 
 
-def test_identity_card_wording_uses_nid_retrieval_boost() -> None:
+def test_identity_card_wording_matches_registered_vocabulary_aliases() -> None:
     page = {
         "institution": "Papua New Guinea Civil and Identity Registry",
         "title": "PNGCIR — NID Registration Information",
@@ -258,3 +258,29 @@ def test_nid_registration_does_not_trigger_ipa_business_boost() -> None:
     results = _rank_passages("How do I apply for a National ID?", pages)
     assert results
     assert results[0]["source"]["institution"] == "Papua New Guinea Civil and Identity Registry"
+
+
+
+def test_generic_context_expansion_keeps_adjacent_application_checklist_items() -> None:
+    page = {
+        "institution": "Example Agency",
+        "title": "Application requirements",
+        "url": "https://example.gov.pg/apply",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": (
+            "Application requirements\n"
+            "Applicant name and residential address.\n"
+            "Names and addresses of all owners.\n"
+            "Principal place of business and postal address.\n"
+            "Description of the proposed activity.\n"
+            "Declaration that the information is correct."
+        ),
+    }
+    results = _rank_passages("What are the application requirements?", [page])
+    retrieved = " ".join(item["text"] for item in results).lower()
+    assert "applicant name and residential address" in retrieved
+    assert "names and addresses of all owners" in retrieved
+    assert "principal place of business" in retrieved
+    assert "proposed activity" in retrieved
+    assert "declaration" in retrieved
