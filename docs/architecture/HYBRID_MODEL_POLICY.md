@@ -9,15 +9,23 @@ The assistant uses a hybrid approach:
 - For ordinary non-government questions, the model may answer from general knowledge. It must not imply that the answer was checked against PNG government sources.
 - If the question is ambiguous, the assistant asks a concise clarifying question.
 
+## Initial provider: Groq
+
+Groq is the approved initial model provider, using its OpenAI-compatible chat-completions API. Initial defaults:
+
+- API base URL: `https://api.groq.com/openai/v1`
+- Model: `openai/gpt-oss-20b`
+- Required secret: `MODEL_API_KEY`
+
+The endpoint and model can be overridden with `MODEL_API_BASE_URL` and `MODEL_NAME` when a different compatible provider is approved. The API key is always server-side. Do not put it in frontend variables, source code, GitHub, or chat messages.
+
+Use only the provider's free tier unless the owner explicitly approves otherwise. Free-tier access and rate limits are controlled by Groq and may change. Do not upgrade to a paid tier or add a payment method.
+
+Groq states that inference requests are not retained by default, but may be temporarily logged for reliability troubleshooting or abuse monitoring for up to 30 days unless Zero Data Retention is enabled. Data storage is in the United States. Users should not submit passwords, highly sensitive personal data, or confidential documents to the chat.
+
 ## Provider boundary
 
-The backend contains an optional OpenAI-compatible chat-completions adapter. The frontend never receives the provider key. The provider is configured only with server-side environment variables:
-
-- `MODEL_API_BASE_URL`: HTTPS base URL ending at the provider API root (for example, a root that exposes `/chat/completions`).
-- `MODEL_API_KEY`: private server-side secret.
-- `MODEL_NAME`: model identifier supported by that provider.
-
-No provider, model, API key, paid plan, or production change is approved by this document. Without all three settings, the application stays in extractive retrieval mode and explains that model responses are not yet enabled. Provider selection and credential setup are separate decisions.
+The backend contains an optional OpenAI-compatible chat-completions adapter. The frontend never receives the provider key. Without `MODEL_API_KEY`, the application stays in extractive retrieval mode and explains that model responses are not yet enabled.
 
 ## Conversation context
 
@@ -34,4 +42,4 @@ The API accepts a bounded recent history of user and assistant messages. It does
 
 ## Current limitation
 
-A provider-neutral adapter is implemented, but the live model is not active until a suitable provider is selected and its private credentials are configured. The application can continue serving retrieved source excerpts in the meantime.
+The Groq adapter is implemented but requires the owner to create an API key and add it as the private `MODEL_API_KEY` environment variable on the backend hosting service. The application can continue serving retrieved source excerpts in the meantime.
