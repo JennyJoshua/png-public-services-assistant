@@ -32,9 +32,24 @@ def _tokens(value: str) -> set[str]:
 def _query_tokens(question: str) -> set[str]:
     """Add narrow vocabulary bridges for common PNG public-service wording."""
     tokens = _tokens(question)
-    if "national" in tokens and ("id" in tokens or "identity" in tokens):
-        tokens.update({"nid", "identity", "card", "registration", "form"})
+    # Treat common NID wording as one concept so abbreviated and expanded
+    # questions retrieve the same official registration guidance.
+    is_nid_wording = (
+        "nid" in tokens
+        or ("national" in tokens and ("id" in tokens or "identity" in tokens))
+        or ("identity" in tokens and "card" in tokens)
+    )
+    if is_nid_wording:
+        tokens.update({"nid", "national", "identity", "id", "card", "registration", "form"})
     return tokens
+
+
+def _is_nid_question(query_tokens: set[str]) -> bool:
+    return (
+        "nid" in query_tokens
+        or ("national" in query_tokens and ("id" in query_tokens or "identity" in query_tokens))
+        or ("identity" in query_tokens and "card" in query_tokens)
+    )
 
 
 def _page_text(html: str) -> tuple[str, str | None]:
@@ -128,9 +143,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
     if not query_tokens:
         return []
 
-    is_nid_question = "national" in query_tokens and (
-        "id" in query_tokens or "identity" in query_tokens or "nid" in query_tokens
-    )
+    is_nid_question = _is_nid_question(query_tokens)
     ranked: list[dict] = []
     for page in pages:
         source_text = f"{page.get('title', '')} {page.get('url', '')}".lower()
