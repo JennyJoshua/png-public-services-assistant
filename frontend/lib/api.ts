@@ -24,7 +24,7 @@ const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
 export function getApiBaseUrl(): string | null {
   if (!configuredBaseUrl) return null;
-  return configuredBaseUrl.replace(/\\/+$/, "");
+  return configuredBaseUrl.replace(/\/+$/, "");
 }
 
 export async function checkApiHealth(signal?: AbortSignal): Promise<ApiHealth> {
