@@ -187,9 +187,9 @@ def test_business_registration_question_ranks_ipa_prerequisites() -> None:
         "last_checked_at": "2026-11-14T00:00:00+00:00",
         "text": (
             "Registering a business name requires up to three proposed names, "
-            "the applicant name and address, and the name and address of each owner.\\n"
+            "the applicant name and address, and the name and address of each owner.\n"
             "Provide the principal place of business, additional business addresses, "
-            "a postal address and the primary business activity.\\n"
+            "a postal address and the primary business activity.\n"
             "To incorporate a company, reserve the company name first and provide "
             "directors, shareholders, company addresses and a company constitution."
         ),
@@ -216,7 +216,7 @@ def test_company_incorporation_question_ranks_company_requirements() -> None:
         "publication_date": None,
         "last_checked_at": "2026-11-14T00:00:00+00:00",
         "text": (
-            "To incorporate a company, reserve the proposed company name and wait for approval.\\n"
+            "To incorporate a company, reserve the proposed company name and wait for approval.\n"
             "Provide company contact details and addresses, directors, shareholders, "
             "and upload the company constitution."
         ),
@@ -224,3 +224,16 @@ def test_company_incorporation_question_ranks_company_requirements() -> None:
     results = _rank_passages("What do I need to incorporate a company?", [page])
     assert results
     assert any("directors, shareholders" in item["text"] for item in results)
+
+
+def test_page_text_extracts_fee_table_rows() -> None:
+    html = """
+    <html><body><main>
+      <table>
+        <tr><th>Form</th><th>Online Fee</th><th>Paper Fee</th></tr>
+        <tr><td>A-17</td><td>K150</td><td>K200</td></tr>
+      </table>
+    </main></body></html>
+    """
+    text, _ = _page_text(html)
+    assert "A-17 K150 K200" in text
