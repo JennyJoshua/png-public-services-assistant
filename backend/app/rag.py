@@ -37,13 +37,34 @@ def _query_tokens(question: str) -> set[str]:
 
 
 def _page_text(html: str) -> tuple[str, str | None]:
+    """Extract meaningful content blocks without flattening lists into prose."""
     soup = BeautifulSoup(html, "html.parser")
     title = soup.title.get_text(" ", strip=True) if soup.title else None
     for element in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript", "svg"]):
         element.decompose()
+
     main = soup.find("main") or soup.find("article") or soup.body or soup
-    text = re.sub(r"\s+", " ", main.get_text(" ", strip=True))
-    return text[:MAX_TEXT_CHARS], title
+    blocks: list[str] = []
+    block_tags = ["h1", "h2", "h3", "h4", "p", "li", "dt", "dd", "tr"]
+    for node in main.find_all(block_tags):
+        if node.find_parent(block_tags):
+            continue
+        if node.name == "tr":
+            value = " — ".join(cell.get_text(" ", strip=True) for cell in node.find_all(["th", "td"]))
+        else:
+            value = node.get_text(" ", strip=True)
+        value = re.sub(r"\s+", " ", value).strip()
+        if value and value not in blocks:
+            blocks.append(value)
+
+    # Some sites use generic containers instead of semantic content tags.
+    if not blocks:
+        blocks = [
+            re.sub(r"\s+", " ", line).strip()
+            for line in main.get_text("\n", strip=True).splitlines()
+            if line.strip()
+        ]
+    return "\n".join(blocks)[:MAX_TEXT_CHARS], title
 
 
 def _published_date(html: str) -> str | None:
@@ -74,6 +95,7 @@ async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
         return {
             "institution": source.institution,
             "title": page_title or source.title,
+            "registry_title": source.title,
             "url": source.url,
             "publication_date": _published_date(html),
             "last_checked_at": datetime.now(timezone.utc).isoformat(),
@@ -84,23 +106,40 @@ async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
 
 
 def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
+    """Rank semantic content blocks, using page identity as a relevance signal."""
     query_tokens = _query_tokens(question)
     if not query_tokens:
         return []
 
+    national_id_query = "national" in query_tokens and (
+        "id" in query_tokens or "identity" in query_tokens or "nid" in query_tokens
+    )
     ranked: list[dict] = []
     for page in pages:
-        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", page["text"])
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if len(sentence) < 45 or len(sentence) > 700:
+        page_title = f"{page.get('title', '')} {page.get('registry_title', '')}".lower()
+        title_tokens = _tokens(page_title)
+        url = page["url"].lower()
+        for block in page["text"].splitlines():
+            block = block.strip()
+            if not block:
                 continue
-            sentence_tokens = _tokens(sentence)
-            overlap = query_tokens & sentence_tokens
-            if not overlap:
-                continue
-            score = sum(2 if token in sentence.lower() else 1 for token in overlap)
-            ranked.append({"score": score, "text": sentence, "source": page})
+            # Keep each list item intact; split only long paragraph-like blocks.
+            parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", block) if len(block) > 900 else [block]
+            for passage in parts:
+                passage = passage.strip()
+                if len(passage) < 35 or len(passage) > 1000:
+                    continue
+                passage_tokens = _tokens(passage)
+                overlap = query_tokens & passage_tokens
+                if not overlap:
+                    continue
+                score = len(overlap) * 2
+                score += len(query_tokens & title_tokens) * 3
+                if national_id_query and "pngcir.gov.pg" in url:
+                    score += 5
+                if national_id_query and any(term in url for term in ("nid-registration", "downloads")):
+                    score += 4
+                ranked.append({"score": score, "text": passage, "source": page})
 
     ranked.sort(key=lambda item: item["score"], reverse=True)
     selected: list[dict] = []

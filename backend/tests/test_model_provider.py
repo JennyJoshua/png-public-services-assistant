@@ -26,7 +26,7 @@ def test_model_is_configured_when_private_key_is_present(monkeypatch) -> None:
     assert model_is_configured() is True
 
 
-def test_prompt_distinguishes_official_evidence_from_general_knowledge() -> None:
+def test_prompt_requires_official_evidence_and_blocks_guessed_procedures() -> None:
     messages = _build_messages(
         "How do I renew a passport?",
         [{
@@ -36,8 +36,10 @@ def test_prompt_distinguishes_official_evidence_from_general_knowledge() -> None
         [{"role": "user", "content": "I live in Gulf Province."}],
     )
     assert messages[0]["role"] == "system"
-    assert "Never invent an official requirement" in messages[0]["content"]
-    assert "General background" in messages[0]["content"]
+    prompt = messages[0]["content"]
+    assert "Never invent an official requirement or infer one from general knowledge" in prompt
+    assert "Do not fill missing steps with common practice from other countries" in prompt
+    assert "Do not suggest possible documents or fees unless the excerpts name them" in prompt
     assert "I live in Gulf Province." in messages[1]["content"]
     assert "[3] The agency publishes passport application information." in messages[2]["content"]
 
