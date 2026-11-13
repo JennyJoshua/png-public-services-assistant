@@ -28,6 +28,14 @@ def _tokens(value: str) -> set[str]:
     }
 
 
+def _query_tokens(question: str) -> set[str]:
+    """Add narrow vocabulary bridges for common PNG public-service wording."""
+    tokens = _tokens(question)
+    if "national" in tokens and ("id" in tokens or "identity" in tokens):
+        tokens.update({"nid", "identity", "card", "registration", "form"})
+    return tokens
+
+
 def _page_text(html: str) -> tuple[str, str | None]:
     soup = BeautifulSoup(html, "html.parser")
     title = soup.title.get_text(" ", strip=True) if soup.title else None
@@ -76,7 +84,7 @@ async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
 
 
 def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
-    query_tokens = _tokens(question)
+    query_tokens = _query_tokens(question)
     if not query_tokens:
         return []
 
