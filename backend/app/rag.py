@@ -42,7 +42,7 @@ def _page_text(html: str) -> tuple[str, str | None]:
     for element in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript", "svg"]):
         element.decompose()
     main = soup.find("main") or soup.find("article") or soup.body or soup
-    text = re.sub(r"\\s+", " ", main.get_text(" ", strip=True))
+    text = re.sub(r"\s+", " ", main.get_text(" ", strip=True))
     return text[:MAX_TEXT_CHARS], title
 
 
@@ -90,7 +90,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
 
     ranked: list[dict] = []
     for page in pages:
-        sentences = re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9])", page["text"])
+        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", page["text"])
         for sentence in sentences:
             sentence = sentence.strip()
             if len(sentence) < 45 or len(sentence) > 700:
