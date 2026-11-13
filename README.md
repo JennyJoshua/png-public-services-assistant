@@ -39,7 +39,7 @@ See the engineering specifications in `docs/` for requirements, architecture, AP
 
 ## Status
 
-Planning and specification stage. No production deployment or paid service is authorized.
+Phase 1 foundation is under development on the phase-1/foundation branch. The current interface is a prototype and is not connected to verified public sources or an AI provider. No production deployment or paid service is authorized.
 
 ## License
 

@@ -1,0 +1,25 @@
+# JavaScript / Next.js
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

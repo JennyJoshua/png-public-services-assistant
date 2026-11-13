@@ -4,7 +4,7 @@
 >
 > **Last updated:** 13 November 2026
 > **Repository:** https://github.com/JennyJoshua/png-public-services-assistant
-> **Project status:** Planning/specification stage. Initial engineering-specification pull request is open and unmerged.
+> **Project status:** Phase 1 foundation in progress on branch phase-1/foundation. Specification PR #1 is merged. A mobile chat UI, FastAPI health endpoint, initial tests, and CI workflow have been committed; CI is running. No AI provider, RAG source corpus, database, or deployment is connected.
 
 ## 1. Project identity and purpose
 
@@ -243,11 +243,16 @@ This is a target structure, not a statement that these directories or modules ha
   - `docs/security/SECURITY_REQUIREMENTS.md`
   - `docs/requirements/PHASE_1_PLAN.md`
 - A technical review comment was posted on PR #1. It found no blocking documentation defect and identified minor follow-up items, including consistent API route versioning and deferring final schema/security details until implementation design.
-- PR #1 has **not been merged**. Do not claim that the project specifications are on `main`.
-- No application code, database, model, OCR pipeline, or production deployment has been implemented through this work.
-- PR URL: https://github.com/JennyJoshua/png-public-services-assistant/pull/1
+- PR #1, **Add product and engineering specifications**, was squash-merged into `main` on 13 November 2026. Merge commit: `d0b3f393822682014910e5333beacfd3726995ce`.
+- The API specification was corrected before merge so all Phase 1 and later-phase routes consistently use `/api/v1`.
+- The current implementation branch is `phase-1/foundation`, created from `main` after the documentation merge.
+- `docs/implementation/PHASE_1_IMPLEMENTATION_BREAKDOWN.md` records the current work packages and hosting/model constraints.
+- Initial foundation files are committed: Next.js 16/React/TypeScript frontend shell, mobile chat prototype UI, FastAPI health endpoint, backend health tests, and GitHub Actions CI workflow.
+- CI workflow run 43366455255 was queued at the last check; results have not yet been confirmed.
+- No AI provider, RAG source corpus, database, OCR pipeline, or production deployment has been connected.
+- PR #1: https://github.com/JennyJoshua/png-public-services-assistant/pull/1
 
-This handover file is being added to the same documentation branch and should appear in PR #1 after the commit succeeds.
+This handover file is maintained on the current implementation branch and should be updated as major project status and decisions change.
 
 ## 12. Project governance and collaboration instructions
 
@@ -288,11 +293,12 @@ When continuing this project in a new chat:
 
 ## 14. Immediate next actions
 
-1. Review the complete contents of PR #1, including this handover file after it is added.
-2. Resolve minor documentation review comments as appropriate.
-3. Obtain the owner's explicit approval before merging PR #1.
-4. After merge, prepare a concrete Phase 1 implementation breakdown and begin the foundation on a separate branch.
-5. Keep model/hosting selection evidence-based and free-first; escalate any paid requirement for approval before proceeding.
+1. Treat PR #1 as merged and main as the approved documentation baseline.
+2. Continue Phase 1 work only on phase-1/foundation or subsequent feature branches.
+3. Follow docs/implementation/PHASE_1_IMPLEMENTATION_BREAKDOWN.md and test each work package.
+4. Keep model, database, and hosting decisions evidence-based and free-first; escalate paid requirements for approval.
+5. Submit implementation work through a PR and obtain explicit approval before merging to main.
+6. Obtain explicit approval before production deployment, destructive operations, paid services, or material scope/architecture changes.
 
 ---
 **End of project handover.**
