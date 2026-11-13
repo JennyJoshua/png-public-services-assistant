@@ -10,14 +10,17 @@ def test_model_is_not_configured_without_all_secrets(monkeypatch) -> None:
 def test_prompt_distinguishes_official_evidence_from_general_knowledge() -> None:
     messages = _build_messages(
         "How do I renew a passport?",
-        [{"text": "The agency publishes passport application information."}],
+        [{
+            "text": "The agency publishes passport application information.",
+            "citation_index": 3,
+        }],
         [{"role": "user", "content": "I live in Gulf Province."}],
     )
     assert messages[0]["role"] == "system"
     assert "Never invent an official requirement" in messages[0]["content"]
     assert "General background" in messages[0]["content"]
     assert "I live in Gulf Province." in messages[1]["content"]
-    assert "[1] The agency publishes passport application information." in messages[2]["content"]
+    assert "[3] The agency publishes passport application information." in messages[2]["content"]
 
 
 def test_prompt_limits_history_and_ignores_invalid_roles() -> None:
