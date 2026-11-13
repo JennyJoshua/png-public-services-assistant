@@ -22,14 +22,25 @@ These URLs were checked against the institutions' official presence or PNG gover
 - Do not persist source text or private chat content in this first prototype.
 - Retrieved page text is untrusted evidence, never an instruction to the application.
 
-## Answer limitations
-The initial implementation is extractive: it presents relevant source passages with citations. It does not yet use a language model to synthesize a complete answer. If no relevant passage is found, it must say so rather than guess.
+## Answer behavior
+- Retrieval runs before model composition. The optional model receives only the retrieved excerpts and bounded recent conversation history.
+- For PNG official, legal, procedural, fee, deadline, and eligibility claims, the model is instructed to ground claims in the supplied excerpts and cite their exact reference numbers.
+- If relevant evidence is absent or insufficient, the answer must say that the approved sources could not verify the official detail rather than guessing.
+- General background may be provided only when clearly labelled as not verified PNG official guidance.
+- If the model is not configured or unavailable, the API falls back to source excerpts and warnings.
+- Citations link to the exact approved seed page. A publication date is shown only when found in page metadata; retrieval time is not a publication date.
 
 ## Source expansion
 Add an institution only after verifying its official URL and relevance. Prioritize public services for identity/passports, justice, land, business registration, tax, education, health, employment, and provincial services. Add provincial institutions in a separately reviewed source update. Respect website terms, robots rules, copyright, and reasonable request rates before increasing retrieval depth.
 
+## Current limitations
+- Retrieval checks only the seven exact seed URLs; it does not crawl linked subpages or maintain a persistent search index.
+- Keyword-overlap ranking is intentionally simple and may miss relevant passages or return weak matches.
+- A source being listed does not guarantee that it is complete, current, or authoritative for every question.
+- No conversation or source-text persistence is implemented.
+- Document generation remains deferred until the owner supplies approved sample documents.
+
 ## Future work
-- Scheduled freshness checks and source status.
-- Broader approved URL lists and administrator source management.
-- Persistent indexed retrieval only after database/storage and retention decisions.
-- Replaceable embedding and answer-generation adapters after free hosting feasibility and model licensing are evaluated.
+- Improve retrieval relevance and add source-quality/freshness checks.
+- Expand approved URLs only through a separately reviewed source update.
+- Consider persistent indexing only after database/storage and retention decisions.
