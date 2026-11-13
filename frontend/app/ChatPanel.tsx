@@ -1,12 +1,15 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { checkApiHealth, getApiBaseUrl } from "../lib/api";
 
 type Message = {
   id: number;
   role: "user" | "assistant";
   content: string;
 };
+
+type ConnectionState = "checking" | "connected" | "unavailable" | "not-configured";
 
 const suggestions = [
   "How do I apply for a National ID?",
@@ -17,6 +20,22 @@ const suggestions = [
 export default function ChatPanel() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    getApiBaseUrl() ? "checking" : "not-configured"
+  );
+
+  useEffect(() => {
+    if (!getApiBaseUrl()) return;
+
+    const controller = new AbortController();
+    checkApiHealth(controller.signal)
+      .then(() => setConnectionState("connected"))
+      .catch(() => {
+        if (!controller.signal.aborted) setConnectionState("unavailable");
+      });
+
+    return () => controller.abort();
+  }, []);
 
   function submitQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,11 +49,18 @@ export default function ChatPanel() {
         id: Date.now() + 1,
         role: "assistant",
         content:
-          "The chat interface is being built. Evidence retrieval and a verified AI provider have not been connected yet, so I cannot responsibly answer this question at this stage."
+          "The chat interface is connected to the application shell, but evidence retrieval and a verified answer provider are not available yet. I cannot responsibly answer this question until those components are connected."
       }
     ]);
     setQuestion("");
   }
+
+  const connectionLabel: Record<ConnectionState, string> = {
+    checking: "Checking API",
+    connected: "API connected",
+    unavailable: "API unavailable",
+    "not-configured": "API not configured"
+  };
 
   return (
     <section className="chat-card" aria-label="Public services question assistant">
@@ -43,7 +69,9 @@ export default function ChatPanel() {
           <h2>Ask a question</h2>
           <p>Use plain language. You do not need an account.</p>
         </div>
-        <span className="status-dot"><span /> Prototype</span>
+        <span className={`status-dot status-${connectionState}`}>
+          <span /> {connectionLabel[connectionState]}
+        </span>
       </div>
 
       {messages.length === 0 ? (
@@ -93,7 +121,7 @@ export default function ChatPanel() {
         </div>
       </form>
       <p className="prototype-notice">
-        Prototype only: responses are not yet connected to verified public sources.
+        Prototype only: verified public-source retrieval and answer generation are not yet connected.
       </p>
     </section>
   );
