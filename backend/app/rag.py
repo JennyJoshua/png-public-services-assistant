@@ -30,22 +30,25 @@ def _tokens(value: str) -> set[str]:
     }
 
 
+VOCABULARY_ALIASES = {
+    "nid": {"national", "identity", "id", "card"},
+    "national": {"nid", "identity"},
+    "identity": {"nid", "national", "card"},
+    "card": {"nid", "identity"},
+    "business": {"businesses", "company", "companies"},
+    "businesses": {"business", "company", "companies"},
+    "company": {"business", "businesses", "companies"},
+    "companies": {"business", "businesses", "company"},
+    "incorporation": {"company", "business"},
+    "incorporate": {"company", "business"},
+}
+
+
 def _query_tokens(question: str) -> set[str]:
-    """Normalize common abbreviations and equivalent public-service terms."""
+    """Expand reusable vocabulary aliases without branching on question topics."""
     tokens = _tokens(question)
-    # Treat common NID wording as one concept so abbreviated and expanded
-    # questions retrieve the same official registration guidance.
-    is_nid_wording = (
-        "nid" in tokens
-        or ("national" in tokens and ("id" in tokens or "identity" in tokens))
-        or ("identity" in tokens and "card" in tokens)
-    )
-    if is_nid_wording:
-        tokens.update({"nid", "national", "identity", "id", "card", "registration", "form"})
-    # Normalize common business-registration wording for the IPA guidance.
-    business_terms = {"business", "businesses", "company", "companies", "incorporation", "incorporate", "registering"}
-    if tokens & business_terms:
-        tokens.update({"business", "businesses", "name", "company", "companies", "registration", "register", "registering", "incorporation", "incorporate", "ipa"})
+    for token in tuple(tokens):
+        tokens.update(VOCABULARY_ALIASES.get(token, set()))
     return tokens
 
 
@@ -203,7 +206,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
         if score > 0:
             source_host = (urlparse(str(document["source"].get("url", ""))).hostname or "").lower()
             if source_host.endswith(".gov.pg"):
-                score += 2.0
+                score += 5.0
             ranked.append({**document, "score": score})
 
     if not ranked:
