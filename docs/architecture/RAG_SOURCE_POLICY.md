@@ -63,6 +63,7 @@ Add an institution only after verifying its official URL and relevance. Prioriti
 - Document generation remains deferred until the owner supplies approved sample documents.
 
 ## Future work
+- Validate BM25 relevance and context expansion against a varied regression set covering identity, business, tax, justice, land, education, health, and general public-service questions.
 - Improve retrieval relevance and add source-quality/freshness checks.
 - Expand approved URLs only through a separately reviewed source update.
 - Consider persistent indexing only after database/storage and retention decisions.
