@@ -12,6 +12,17 @@ The first retrieval slice uses a small, curated set of official PNG public-servi
 - National and Supreme Courts of Papua New Guinea — https://www.pngjudiciary.gov.pg/
 - Land Commission of Papua New Guinea — https://www.landcommission.gov.pg/
 
+## Focused identity-registration source addition
+The following five exact pages from the Papua New Guinea Civil and Identity Registry (PNGCIR) are included because PNGCIR is the official registry responsible for civil registration and National Identity Cards:
+- Registry overview — https://pngcir.gov.pg/
+- NID registration instructions — https://pngcir.gov.pg/nid-registration-information/
+- Registration forms — https://pngcir.gov.pg/downloads/
+- Published fees — https://pngcir.gov.pg/png-civil-identity-registry-fees/
+- Contact details — https://pngcir.gov.pg/contact/
+
+The registration instructions state that full online registration is not possible because fingerprint and identity capture must be completed in person. They direct applicants to download and complete the relevant form and lodge it at the nearest Civil and Identity Registry office. The page also says the form should be printed double-sided and completed in blue biro. The fees page is included as an official source, but the assistant must not state a fee amount unless it can retrieve readable, current fee evidence from that page.
+
+## Source verification and maintenance
 These URLs were checked against the institutions' official presence or PNG government domain references when the pilot source list was prepared. Each source must be rechecked periodically. A government domain does not guarantee that every page is current or that every statement is legally authoritative.
 
 ## Retrieval behavior
@@ -34,7 +45,7 @@ These URLs were checked against the institutions' official presence or PNG gover
 Add an institution only after verifying its official URL and relevance. Prioritize public services for identity/passports, justice, land, business registration, tax, education, health, employment, and provincial services. Add provincial institutions in a separately reviewed source update. Respect website terms, robots rules, copyright, and reasonable request rates before increasing retrieval depth.
 
 ## Current limitations
-- Retrieval checks only the seven exact seed URLs; it does not crawl linked subpages or maintain a persistent search index.
+- Retrieval checks only the exact seed URLs; it does not crawl linked subpages or maintain a persistent search index.
 - Keyword-overlap ranking is intentionally simple and may miss relevant passages or return weak matches.
 - A source being listed does not guarantee that it is complete, current, or authoritative for every question.
 - No conversation or source-text persistence is implemented.
