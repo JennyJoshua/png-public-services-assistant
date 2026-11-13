@@ -17,6 +17,27 @@ def test_page_text_removes_navigation_and_scripts() -> None:
     assert "ignore this script" not in text
 
 
+def test_page_text_preserves_paragraphs_and_list_items_as_separate_blocks() -> None:
+    html = """
+    <html><body><main>
+      <h2>How to register</h2>
+      <p>Download the official registration form and complete the required details.</p>
+      <ol>
+        <li>Lodge the completed form at the nearest registry office.</li>
+        <li>Attend in person for fingerprint and identity capture.</li>
+      </ol>
+    </main></body></html>
+    """
+    text, _ = _page_text(html)
+    blocks = text.splitlines()
+    assert blocks == [
+        "How to register",
+        "Download the official registration form and complete the required details.",
+        "Lodge the completed form at the nearest registry office.",
+        "Attend in person for fingerprint and identity capture.",
+    ]
+
+
 def test_rank_passages_returns_relevant_source_excerpt() -> None:
     pages = [{
         "institution": "Example Agency",
@@ -26,7 +47,7 @@ def test_rank_passages_returns_relevant_source_excerpt() -> None:
         "last_checked_at": "2026-11-13T00:00:00+00:00",
         "text": (
             "The Companies Office administers business registration and maintains "
-            "the national register of companies and business names. "
+            "the national register of companies and business names.\n"
             "The weather is usually warm during the wet season."
         ),
     }]
@@ -62,19 +83,86 @@ def test_pngcir_is_an_explicit_curated_source_set() -> None:
 def test_national_id_question_ranks_official_registration_instructions() -> None:
     pages = [{
         "institution": "Papua New Guinea Civil and Identity Registry",
-        "title": "NID Registration Information",
+        "title": "PNGCIR — NID Registration Information",
         "url": "https://pngcir.gov.pg/nid-registration-information/",
         "publication_date": None,
         "last_checked_at": "2026-11-13T00:00:00+00:00",
         "text": (
             "Full online registration is not possible because every citizen must provide "
-            "fingerprint and ID capture in person. "
+            "fingerprint and ID capture in person.\n"
             "Normal registration: Download the Registration Form, fill in the details "
-            "and lodge it at your nearest Civil and Identity Registry Office. "
+            "and lodge it at your nearest Civil and Identity Registry Office.\n"
             "National Identity Card Information is for applicants 18 years and above only."
         ),
+    }, {
+        "institution": "Example News",
+        "title": "National Identity Card holder",
+        "url": "https://example.org/news",
+        "publication_date": None,
+        "last_checked_at": "2026-11-13T00:00:00+00:00",
+        "text": "A National Identity Card holder may be asked to provide identification as a witness.",
     }]
     results = _rank_passages("How do I apply for a National ID?", pages)
     assert results
     assert results[0]["source"]["institution"] == "Papua New Guinea Civil and Identity Registry"
     assert any("lodge it at your nearest Civil and Identity Registry Office" in item["text"] for item in results)
+    assert all(item["source"]["institution"] == "Papua New Guinea Civil and Identity Registry" for item in results[:3])
+
+
+def test_national_id_query_keeps_registration_form_and_in_person_capture_passages() -> None:
+    page = {
+        "institution": "Papua New Guinea Civil and Identity Registry",
+        "title": "PNGCIR — NID Registration Information",
+        "url": "https://pngcir.gov.pg/nid-registration-information/",
+        "publication_date": None,
+        "last_checked_at": "2026-11-13T00:00:00+00:00",
+        "text": (
+            "Normal registration: Download the Registration Form, fill in the details "
+            "and lodge it at your nearest Civil and Identity Registry Office.\n"
+            "Full online registration is not possible because fingerprint and ID capture "
+            "must be completed in person."
+        ),
+    }
+    results = _rank_passages("How do I apply for a National ID?", [page])
+    assert len(results) == 2
+    assert "Registration Form" in results[0]["text"]
+    assert "fingerprint and ID capture" in results[1]["text"]
+
+
+
+def test_nid_abbreviation_ranks_official_registration_instructions() -> None:
+    page = {
+        "institution": "Papua New Guinea Civil and Identity Registry",
+        "title": "PNGCIR — NID Registration Information",
+        "url": "https://pngcir.gov.pg/nid-registration-information/",
+        "publication_date": None,
+        "last_checked_at": "2026-11-13T00:00:00+00:00",
+        "text": (
+            "Normal registration: Download the Registration Form, fill in the details "
+            "and lodge it at your nearest Civil and Identity Registry Office.\n"
+            "Full online registration is not possible because fingerprint and ID capture "
+            "must be completed in person."
+        ),
+    }
+    results = _rank_passages("How do I apply for an NID?", [page])
+    assert len(results) == 2
+    assert "Registration Form" in results[0]["text"]
+    assert "fingerprint and ID capture" in results[1]["text"]
+
+
+def test_identity_card_wording_uses_nid_retrieval_boost() -> None:
+    page = {
+        "institution": "Papua New Guinea Civil and Identity Registry",
+        "title": "PNGCIR — NID Registration Information",
+        "url": "https://pngcir.gov.pg/nid-registration-information/",
+        "publication_date": None,
+        "last_checked_at": "2026-11-13T00:00:00+00:00",
+        "text": (
+            "Normal registration: Download the Registration Form, fill in the details "
+            "and lodge it at your nearest Civil and Identity Registry Office."
+        ),
+    }
+    results = _rank_passages("How do I get an identity card?", [page])
+    assert results
+    assert results[0]["source"]["institution"] == "Papua New Guinea Civil and Identity Registry"
+    assert "Registration Form" in results[0]["text"]

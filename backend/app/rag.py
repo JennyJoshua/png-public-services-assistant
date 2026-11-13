@@ -12,7 +12,8 @@ from app.source_registry import SOURCES
 
 MAX_PAGE_BYTES = 1_500_000
 MAX_TEXT_CHARS = 24_000
-MAX_SNIPPETS = 5
+MAX_PASSAGE_CHARS = 1_400
+MAX_SNIPPETS = 8
 STOP_WORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does",
     "for", "from", "how", "i", "in", "is", "it", "me", "my", "of", "on",
@@ -31,19 +32,49 @@ def _tokens(value: str) -> set[str]:
 def _query_tokens(question: str) -> set[str]:
     """Add narrow vocabulary bridges for common PNG public-service wording."""
     tokens = _tokens(question)
-    if "national" in tokens and ("id" in tokens or "identity" in tokens):
-        tokens.update({"nid", "identity", "card", "registration", "form"})
+    # Treat common NID wording as one concept so abbreviated and expanded
+    # questions retrieve the same official registration guidance.
+    is_nid_wording = (
+        "nid" in tokens
+        or ("national" in tokens and ("id" in tokens or "identity" in tokens))
+        or ("identity" in tokens and "card" in tokens)
+    )
+    if is_nid_wording:
+        tokens.update({"nid", "national", "identity", "id", "card", "registration", "form"})
     return tokens
 
 
+def _is_nid_question(query_tokens: set[str]) -> bool:
+    return (
+        "nid" in query_tokens
+        or ("national" in query_tokens and ("id" in query_tokens or "identity" in query_tokens))
+        or ("identity" in query_tokens and "card" in query_tokens)
+    )
+
+
 def _page_text(html: str) -> tuple[str, str | None]:
+    """Extract semantic content blocks without flattening lists into page-wide prose."""
     soup = BeautifulSoup(html, "html.parser")
     title = soup.title.get_text(" ", strip=True) if soup.title else None
     for element in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript", "svg"]):
         element.decompose()
+
     main = soup.find("main") or soup.find("article") or soup.body or soup
-    text = re.sub(r"\s+", " ", main.get_text(" ", strip=True))
-    return text[:MAX_TEXT_CHARS], title
+    blocks: list[str] = []
+    for element in main.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "dt", "dd"]):
+        # A paragraph nested in a list item is already represented by its parent list item.
+        if element.name == "p" and element.find_parent("li"):
+            continue
+        value = re.sub(r"\s+", " ", element.get_text(" ", strip=True)).strip()
+        if value and (not blocks or value != blocks[-1]):
+            blocks.append(value)
+
+    # Some CMS pages use content divs without semantic paragraph tags.
+    if not blocks:
+        value = re.sub(r"\s+", " ", main.get_text(" ", strip=True)).strip()
+        if value:
+            blocks.append(value)
+    return "\n".join(blocks)[:MAX_TEXT_CHARS], title
 
 
 def _published_date(html: str) -> str | None:
@@ -83,24 +114,58 @@ async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
         return None
 
 
+def _passage_blocks(page_text: str) -> list[str]:
+    """Keep headings, paragraphs and list items intact as individual passages."""
+    passages: list[str] = []
+    for block in page_text.splitlines():
+        block = block.strip()
+        if not block:
+            continue
+        if len(block) <= MAX_PASSAGE_CHARS:
+            passages.append(block)
+            continue
+        # Split only exceptionally long blocks; retain sentence boundaries.
+        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", block)
+        current = ""
+        for sentence in sentences:
+            if current and len(current) + len(sentence) + 1 > MAX_PASSAGE_CHARS:
+                passages.append(current)
+                current = sentence
+            else:
+                current = f"{current} {sentence}".strip()
+        if current:
+            passages.append(current)
+    return passages
+
+
 def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
     query_tokens = _query_tokens(question)
     if not query_tokens:
         return []
 
+    is_nid_question = _is_nid_question(query_tokens)
     ranked: list[dict] = []
     for page in pages:
-        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", page["text"])
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if len(sentence) < 45 or len(sentence) > 700:
+        source_text = f"{page.get('title', '')} {page.get('url', '')}".lower()
+        source_boost = 0
+        if is_nid_question and "pngcir.gov.pg" in source_text:
+            source_boost += 12
+        if is_nid_question and ("nid-registration-information" in source_text or "registration information" in source_text):
+            source_boost += 10
+
+        for passage in _passage_blocks(page["text"]):
+            if len(passage) < 35:
                 continue
-            sentence_tokens = _tokens(sentence)
-            overlap = query_tokens & sentence_tokens
+            passage_tokens = _tokens(passage)
+            overlap = query_tokens & passage_tokens
             if not overlap:
                 continue
-            score = sum(2 if token in sentence.lower() else 1 for token in overlap)
-            ranked.append({"score": score, "text": sentence, "source": page})
+            score = sum(3 if token in passage.lower() else 1 for token in overlap)
+            score += source_boost
+            # Prefer passages that explain an action, rather than generic mentions of an ID.
+            if is_nid_question and any(term in passage.lower() for term in ("download", "lodge", "registration form", "fingerprint", "capture")):
+                score += 5
+            ranked.append({"score": score, "text": passage, "source": page})
 
     ranked.sort(key=lambda item: item["score"], reverse=True)
     selected: list[dict] = []
@@ -119,7 +184,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
 async def retrieve_answer(question: str, history: list[dict] | None = None) -> dict:
     """Fetch approved evidence, then optionally ask a model to compose the response."""
     timeout = httpx.Timeout(7.0, connect=4.0)
-    headers = {"User-Agent": "PNGPublicServicesAssistant/0.2", "Accept": "text/html"}
+    headers = {"User-Agent": "PNGPublicServicesAssistant/0.3", "Accept": "text/html"}
     async with httpx.AsyncClient(timeout=timeout, headers=headers, follow_redirects=True) as client:
         pages = await asyncio.gather(*(_fetch_source(client, source) for source in SOURCES))
 
