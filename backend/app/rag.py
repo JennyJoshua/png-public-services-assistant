@@ -28,13 +28,21 @@ def _tokens(value: str) -> set[str]:
     }
 
 
+def _query_tokens(question: str) -> set[str]:
+    """Add narrow vocabulary bridges for common PNG public-service wording."""
+    tokens = _tokens(question)
+    if "national" in tokens and ("id" in tokens or "identity" in tokens):
+        tokens.update({"nid", "identity", "card", "registration", "form"})
+    return tokens
+
+
 def _page_text(html: str) -> tuple[str, str | None]:
     soup = BeautifulSoup(html, "html.parser")
     title = soup.title.get_text(" ", strip=True) if soup.title else None
     for element in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript", "svg"]):
         element.decompose()
     main = soup.find("main") or soup.find("article") or soup.body or soup
-    text = re.sub(r"\s+", " ", main.get_text(" ", strip=True))
+    text = re.sub(r"\\s+", " ", main.get_text(" ", strip=True))
     return text[:MAX_TEXT_CHARS], title
 
 
@@ -76,13 +84,13 @@ async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
 
 
 def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
-    query_tokens = _tokens(question)
+    query_tokens = _query_tokens(question)
     if not query_tokens:
         return []
 
     ranked: list[dict] = []
     for page in pages:
-        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", page["text"])
+        sentences = re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9])", page["text"])
         for sentence in sentences:
             sentence = sentence.strip()
             if len(sentence) < 45 or len(sentence) > 700:
@@ -169,7 +177,7 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
             "These are source excerpts, not confirmation that every requirement is current or applies "
             "to your circumstances. Open the cited page and confirm important details with the institution."
         )
-        fallback = "\n\n".join(answer_lines)
+        fallback = "\\n\\n".join(answer_lines)
 
     if not model_is_configured():
         warnings.append(
