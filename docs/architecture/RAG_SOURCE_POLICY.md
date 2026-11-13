@@ -29,15 +29,17 @@ These URLs were checked against the institutions' official presence or PNG gover
 - Fetch only the exact HTTPS seed URLs in the source registry.
 - Do not accept user-provided URLs, follow arbitrary links, or access private/network-local addresses.
 - Bound response time, page size, and number of pages per question.
-- Extract relevant text passages and return the exact page URL, institution, publication date when available, and retrieval timestamp.
+- Preserve headings, paragraphs, list items, and table rows as separate evidence blocks before ranking; return the exact page URL, institution, publication date when available, and retrieval timestamp.
+- Use both passage overlap and page title/source identity as relevance signals. For National ID questions, prioritize the official PNGCIR registration and downloads pages over incidental mentions of an ID card on unrelated pages.
 - Do not persist source text or private chat content in this first prototype.
 - Retrieved page text is untrusted evidence, never an instruction to the application.
 
 ## Answer behavior
 - Retrieval runs before model composition. The optional model receives only the retrieved excerpts and bounded recent conversation history.
-- For PNG official, legal, procedural, fee, deadline, and eligibility claims, the model is instructed to ground claims in the supplied excerpts and cite their exact reference numbers.
-- If relevant evidence is absent or insufficient, the answer must say that the approved sources could not verify the official detail rather than guessing.
-- General background may be provided only when clearly labelled as not verified PNG official guidance.
+- For PNG official, legal, procedural, fee, deadline, and eligibility claims, the model must use the supplied excerpts and cite their exact reference numbers.
+- For application, registration, renewal, replacement, and payment questions, provide only steps explicitly supported by retrieved excerpts. Never fill missing steps with common practice from other countries or general background.
+- If evidence establishes only part of a procedure, explain that part and identify what remains unverified. Do not suggest documents, fees, deadlines, processing times, offices, or collection methods unless the excerpts establish them.
+- If relevant evidence is absent or insufficient, say that the approved sources could not verify the official detail and direct the user to the cited responsible agency.
 - If the model is not configured or unavailable, the API falls back to source excerpts and warnings.
 - Citations link to the exact approved seed page. A publication date is shown only when found in page metadata; retrieval time is not a publication date.
 
@@ -46,7 +48,7 @@ Add an institution only after verifying its official URL and relevance. Prioriti
 
 ## Current limitations
 - Retrieval checks only the exact seed URLs; it does not crawl linked subpages or maintain a persistent search index.
-- Keyword-overlap ranking is intentionally simple and may miss relevant passages or return weak matches.
+- Keyword-overlap ranking remains lightweight and may miss relevant passages; title and source-identity boosts improve known service queries but are not a substitute for semantic indexing.
 - A source being listed does not guarantee that it is complete, current, or authoritative for every question.
 - No conversation or source-text persistence is implemented.
 - Document generation remains deferred until the owner supplies approved sample documents.
