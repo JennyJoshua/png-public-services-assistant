@@ -3,6 +3,7 @@
 The API is versioned under `/api/v1`. This is a proposed contract for implementation; request and response schemas must be formalized in code and tested.
 
 ## 1. Conventions
+- All application endpoints, including later-phase endpoints, use the `/api/v1` prefix.
 - JSON for ordinary requests/responses.
 - UTF-8 text.
 - UTC ISO-8601 timestamps.
@@ -51,15 +52,15 @@ The example URL and dates are placeholders, not real source data. Actual citatio
 Returns only messages the caller is authorized to access, with pagination and retention rules applied.
 
 ## 3. Later-phase endpoint families
-- `POST /documents/uploads`: request a bounded, private upload; validate file type and size.
-- `POST /documents/extract`: create an extraction job and return job ID/status.
-- `GET /jobs/{job_id}`: retrieve authorized processing status.
-- `POST /documents/generate`: create a document draft from user instructions and approved inputs.
-- `GET /documents/{document_id}/preview`: provide a safe preview.
-- `POST /documents/{document_id}/approve-export`: export only after explicit user approval.
-- `POST /forms/analyze`: identify form structure and fields.
-- `POST /forms/{form_id}/populate`: populate only confirmed user-provided values.
-- `GET /documents/{document_id}/download`: authorize a short-lived download.
+- `POST /api/v1/documents/uploads`: request a bounded, private upload; validate file type and size.
+- `POST /api/v1/documents/extract`: create an extraction job and return job ID/status.
+- `GET /api/v1/jobs/{job_id}`: retrieve authorized processing status.
+- `POST /api/v1/documents/generate`: create a document draft from user instructions and approved inputs.
+- `GET /api/v1/documents/{document_id}/preview`: provide a safe preview.
+- `POST /api/v1/documents/{document_id}/approve-export`: export only after explicit user approval.
+- `POST /api/v1/forms/analyze`: identify form structure and fields.
+- `POST /api/v1/forms/{form_id}/populate`: populate only confirmed user-provided values.
+- `GET /api/v1/documents/{document_id}/download`: authorize a short-lived download.
 
 These routes are roadmap items and must not be represented as implemented until delivered and tested.
 
