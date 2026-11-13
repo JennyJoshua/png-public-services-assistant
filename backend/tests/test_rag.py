@@ -178,35 +178,63 @@ def test_ipa_business_registration_sources_are_curated() -> None:
     }
 
 
-def test_business_registration_question_ranks_ipa_prerequisites() -> None:
-    pages = [{
+def test_business_registration_question_ranks_actual_ipa_checklist_fields() -> None:
+    # These are individual checklist items published by IPA, kept as separate
+    # passages in the live page's list structure.
+    page = {
+        "institution": "Investment Promotion Authority",
+        "title": "Registering a Business Name",
+        "url": "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": (
+            "1 Collect Required Information\\n"
+            "Proposed Business Name: Enter the proposed name. Note: this cannot be the same or nearly the same as a name already in use by another registered entity. You may enter up to 3 potential names so that if the first is rejected your application may still proceed using the second name.\\n"
+            "Name and address of applicant.\\n"
+            "Owners: Name and address for each individual person that is an owner. If the owner is an entity already registered with IPA (like a company) you only need to enter its registration number.\\n"
+            "Addresses: Principal place of business, additional places of business, and a postal address must all be provided.\\n"
+            "Primary Business Activity: Tick the appropriate box.\\n"
+            "Foreign Investor: If an owner is a foreign investor, you must indicate this on the Application. They will need to seek a foreign investor certification.\\n"
+            "Declarations: Tick the box affirming that the information you have submitted is true."
+        ),
+    }
+    results = _rank_passages("What are the prerequisites of registering a business?", [page])
+    retrieved = " ".join(item["text"] for item in results).lower()
+    assert results
+    assert "proposed business name" in retrieved
+    assert "name and address of applicant" in retrieved
+    assert "owners: name and address" in retrieved
+    assert "principal place of business" in retrieved
+    assert "primary business activity" in retrieved
+    assert "foreign investor" in retrieved
+    assert "declarations" in retrieved
+    assert all(item["source"]["institution"] == "Investment Promotion Authority" for item in results)
+
+
+def test_business_name_account_and_company_requirements_are_distinguished() -> None:
+    page = {
         "institution": "Investment Promotion Authority",
         "title": "IPA — Business Name Registration and Company Incorporation Guide",
         "url": "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
         "publication_date": None,
         "last_checked_at": "2026-11-14T00:00:00+00:00",
         "text": (
-            "Registering a business name requires up to three proposed names, "
-            "the applicant name and address, and the name and address of each owner.\n"
-            "Provide the principal place of business, additional business addresses, "
-            "a postal address and the primary business activity.\n"
-            "To incorporate a company, reserve the company name first and provide "
-            "directors, shareholders, company addresses and a company constitution."
+            "To start the online process to register a business name, you must first have an account.\\n"
+            "To file an online application to register a new company you must first have a client account with the registry.\\n"
+            "Under the Company section, reserve a name for the type of company you want to register. Once the name reservation is submitted and approved, you may proceed to register.\\n"
+            "Contact Details: Contact information for the company, including various addresses (such as a registered office address) and principal place of business.\\n"
+            "Directors: Enter relevant details for each director.\\n"
+            "Shareholders: Enter relevant details for each shareholder.\\n"
+            "Company Constitution: If you are forming a company you will be required to upload a copy of the company's constitution."
         ),
-    }, {
-        "institution": "PNG National Information Centre",
-        "title": "National Information Centre",
-        "url": "https://info.gov.pg/home/",
-        "publication_date": None,
-        "last_checked_at": "2026-11-14T00:00:00+00:00",
-        "text": "The government provides many public services and information to citizens.",
-    }]
-    results = _rank_passages("What are the prerequisites of registering a business?", pages)
-    assert results
-    assert results[0]["source"]["institution"] == "Investment Promotion Authority"
-    assert any("proposed names" in item["text"] for item in results)
-    assert all(item["source"]["institution"] == "Investment Promotion Authority" for item in results)
-
+    }
+    results = _rank_passages("What are the prerequisites of registering a business?", [page])
+    retrieved = " ".join(item["text"] for item in results).lower()
+    assert "client account" in retrieved or "have an account" in retrieved
+    assert "reserve a name" in retrieved
+    assert "directors" in retrieved
+    assert "shareholders" in retrieved
+    assert "company constitution" in retrieved
 
 def test_company_incorporation_question_ranks_company_requirements() -> None:
     page = {
