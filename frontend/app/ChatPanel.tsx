@@ -17,12 +17,11 @@ const suggestions = [
 export default function ChatPanel() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isChecking, setIsChecking] = useState(false);
 
   function submitQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = question.trim();
-    if (!value || isChecking) return;
+    if (!value) return;
 
     setMessages((current) => [
       ...current,
@@ -85,11 +84,10 @@ export default function ChatPanel() {
           placeholder="Type your question here..."
           rows={2}
           maxLength={2000}
-          disabled={isChecking}
         />
         <div className="composer-bottom">
           <span>Do not include passwords or sensitive personal information.</span>
-          <button className="send-button" type="submit" disabled={!question.trim() || isChecking}>
+          <button className="send-button" type="submit" disabled={!question.trim()}>
             Send <span aria-hidden="true">→</span>
           </button>
         </div>
