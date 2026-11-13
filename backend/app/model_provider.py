@@ -53,7 +53,7 @@ def _build_messages(
         "You are the PNG Public Services Assistant. Answer clearly, helpfully, and in plain language. "
         "Use the supplied source excerpts as the evidence for claims about Papua New Guinea government "
         "services, laws, eligibility, procedures, fees, deadlines, and official requirements. Never "
-        "invent or infer an official requirement, fee, deadline, office, form, processing time, or "
+        "invent an official requirement or infer one from general knowledge. Never invent a fee, deadline, office, form, processing time, or "
         "collection method. For a question asking how to apply for, register for, renew, replace, or "
         "pay for a PNG government service, provide only steps explicitly supported by the supplied "
         "excerpts. Do not fill missing steps with common practice from other countries or general "
