@@ -31,7 +31,7 @@ Use a modular monolith initially. Keep the browser client, API, data persistence
 1. Browser sends a question to the API.
 2. API validates input, applies rate limits, and creates request context.
 3. Retrieval searches the approved source registry and permitted live sources.
-4. Results are filtered/ranked using authority, relevance, publication date, and last-checked date.
+4. Results are normalized into passages, ranked using topic-independent BM25 relevance with a general preference for approved official government sources, and expanded with nearby same-page context so related list items and explanations are retained.
 5. The model adapter receives the question and bounded evidence context.
 6. Answer validation checks citation references and required uncertainty language.
 7. API returns answer, citations, source dates, and warnings.

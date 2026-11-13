@@ -33,6 +33,7 @@ The API accepts a bounded recent history of user and assistant messages. It does
 
 ## Safety and quality
 
+- The assistant's permanent role and answer standards live in `backend/app/system_prompt.py`; user questions and retrieved evidence provide per-turn context without changing that contract.
 - Retrieved web content and conversation history are treated as untrusted data, not instructions.
 - Official PNG claims require supporting approved-source evidence.
 - The model must never invent source links, citation numbers, fees, forms, eligibility criteria, or deadlines.
@@ -46,7 +47,7 @@ The Groq provider defaults and adapter are implemented on the feature branch. Th
 
 ## Current limitations
 
-- The current retrieval pilot checks only seven exact seed URLs and does not crawl their linked subpages.
-- Retrieval uses basic keyword overlap and can miss relevant material.
+- The current retrieval pilot checks only the exact approved seed URLs and does not crawl their linked subpages.
+- Retrieval uses general BM25 relevance ranking, reusable vocabulary normalization, and same-page context expansion. It is still lexical rather than embedding-based semantic search, so unfamiliar synonyms and concepts may be missed.
 - No conversation persistence or document generation is implemented.
 - Document generation remains deferred until the owner supplies approved sample documents.
