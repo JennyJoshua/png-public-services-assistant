@@ -177,7 +177,7 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
             "These are source excerpts, not confirmation that every requirement is current or applies "
             "to your circumstances. Open the cited page and confirm important details with the institution."
         )
-        fallback = "\\n\\n".join(answer_lines)
+        fallback = "\n\n".join(answer_lines)
 
     if not model_is_configured():
         warnings.append(
