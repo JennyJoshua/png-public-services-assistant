@@ -12,7 +12,7 @@ def test_health_returns_expected_status() -> None:
     assert response.json() == {
         "status": "ok",
         "service": "png-public-services-assistant-api",
-        "version": "0.1.0",
+        "version": "0.3.0",
     }
 
 

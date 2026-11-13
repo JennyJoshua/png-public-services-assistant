@@ -4,12 +4,11 @@ A mobile-first assistant designed to help people in Papua New Guinea find trustw
 
 ## Product direction
 
-The application will provide:
+The application provides a conversational interface for:
 - Evidence-grounded answers about PNG public services, procedures, eligibility, required documents, and responsible institutions.
+- General-knowledge answers for ordinary questions, clearly separated from official PNG guidance.
 - Source links and dates so users can check information themselves.
-- Conversational help understanding forms and preparing documents.
-- Document preview and user approval before export.
-- OCR and form-filling capabilities introduced in later phases.
+- Later: document generation from user-approved samples, preview, and DOCX/PDF export.
 
 ## Principles
 
@@ -23,23 +22,25 @@ The application will provide:
 
 ## Planned architecture
 
-The initial direction is a modular monolith with a Next.js/TypeScript frontend, a Python/FastAPI backend, and PostgreSQL. Retrieval will combine carefully sourced public information with indexed documents. Model, embedding, OCR, and storage integrations will sit behind replaceable adapters.
+The initial implementation uses a Next.js/TypeScript frontend and a Python/FastAPI backend. Retrieval fetches a small curated set of public PNG sources. An optional OpenAI-compatible model adapter composes conversational answers using bounded conversation history. Model credentials are server-side only.
 
-Specific technologies and hosting choices remain subject to compatibility, licensing, resource, and free-tier evaluation. No paid service is approved by this README.
+The approved initial provider is Groq's free tier, using the OpenAI-compatible endpoint and the `openai/gpt-oss-20b` model. No paid plan or payment method is approved.
 
 ## Delivery phases
 
-1. Public-information chat, source management, retrieval, citations, and foundational security.
-2. Document upload, extraction, generation, preview, and DOCX/PDF export.
+1. Public-information chat, source retrieval, citations, model integration, and foundational security.
+2. Document upload, extraction, generation from approved samples, preview, and DOCX/PDF export.
 3. OCR and form understanding.
 4. Assisted form completion, validation, preview, and export/printing.
 5. Quality, security, performance, accessibility, and controlled release.
 
-See the engineering specifications in `docs/` for requirements, architecture, API contracts, security, and the Phase 1 plan.
+See the engineering specifications in `docs/` for requirements, architecture, API contracts, security, source policy, and model-provider policy.
 
 ## Status
 
-Phase 1 foundation is under development on the phase-1/foundation branch. The current interface is a prototype and is not connected to verified public sources or an AI provider. No production deployment or paid service is authorized.
+The source-retrieval and hybrid-model implementation is in draft PR #5. CI has passed for the latest feature-branch commit, including frontend typecheck, lint, production build, and backend tests. The Groq API key has been added as a private Render backend environment variable using Save Only; it will take effect after an approved deployment. PR #5 has not been merged, and production deployment has not been authorized.
+
+Document generation remains deferred until the owner uploads approved sample documents.
 
 ## License
 
