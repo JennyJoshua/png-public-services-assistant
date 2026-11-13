@@ -1,7 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { checkApiHealth, getApiBaseUrl, sendChatMessage, type Citation } from "../lib/api";
+import {
+  checkApiHealth,
+  getApiBaseUrl,
+  sendChatMessage,
+  type Citation,
+  type ChatHistoryMessage,
+} from "../lib/api";
 
 type Message = {
   id: number;
@@ -9,6 +15,7 @@ type Message = {
   content: string;
   citations?: Citation[];
   warnings?: string[];
+  answerMode?: "model" | "extractive";
 };
 
 type ConnectionState = "checking" | "connected" | "unavailable" | "not-configured";
@@ -16,7 +23,7 @@ type ConnectionState = "checking" | "connected" | "unavailable" | "not-configure
 const suggestions = [
   "How do I apply for a National ID?",
   "Where can I find information about business registration?",
-  "What public services are available in my province?"
+  "What public services are available in my province?",
 ];
 
 export default function ChatPanel() {
@@ -45,15 +52,19 @@ export default function ChatPanel() {
     const value = question.trim();
     if (!value || isSending) return;
 
+    const history: ChatHistoryMessage[] = messages.map(({ role, content }) => ({
+      role,
+      content,
+    }));
     setMessages((current) => [
       ...current,
-      { id: Date.now(), role: "user", content: value }
+      { id: Date.now(), role: "user", content: value },
     ]);
     setQuestion("");
     setIsSending(true);
 
     try {
-      const result = await sendChatMessage(value);
+      const result = await sendChatMessage(value, history);
       setMessages((current) => [
         ...current,
         {
@@ -61,8 +72,9 @@ export default function ChatPanel() {
           role: "assistant",
           content: result.answer,
           citations: result.citations,
-          warnings: result.warnings
-        }
+          warnings: result.warnings,
+          answerMode: result.answer_mode,
+        },
       ]);
     } catch (error) {
       setMessages((current) => [
@@ -72,8 +84,8 @@ export default function ChatPanel() {
           role: "assistant",
           content: error instanceof Error
             ? error.message
-            : "The service is temporarily unavailable. Please try again."
-        }
+            : "The service is temporarily unavailable. Please try again.",
+        },
       ]);
     } finally {
       setIsSending(false);
@@ -84,7 +96,7 @@ export default function ChatPanel() {
     checking: "Checking API",
     connected: "API connected",
     unavailable: "API unavailable",
-    "not-configured": "API not configured"
+    "not-configured": "API not configured",
   };
 
   return (
@@ -103,7 +115,7 @@ export default function ChatPanel() {
         <div className="welcome-panel">
           <div className="welcome-icon" aria-hidden="true">?</div>
           <h3>What would you like to know?</h3>
-          <p>For example, you can ask about an application, a government office, or a public service.</p>
+          <p>Ask about a PNG public service, an application, a government office, or a general topic.</p>
           <div className="suggestions">
             {suggestions.map((item) => (
               <button
@@ -121,7 +133,14 @@ export default function ChatPanel() {
         <div className="conversation" aria-live="polite">
           {messages.map((message) => (
             <article className={`message message-${message.role}`} key={message.id}>
-              <span className="message-role">{message.role === "user" ? "You" : "Assistant"}</span>
+              <span className="message-role">
+                {message.role === "user" ? "You" : "Assistant"}
+                {message.answerMode && (
+                  <span className="answer-mode">
+                    {message.answerMode === "model" ? " · AI response" : " · Source excerpts"}
+                  </span>
+                )}
+              </span>
               <p className="message-content">{message.content}</p>
               {message.citations && message.citations.length > 0 && (
                 <div className="message-citations">
@@ -152,7 +171,7 @@ export default function ChatPanel() {
           {isSending && (
             <article className="message message-assistant" aria-live="polite">
               <span className="message-role">Assistant</span>
-              <p>Checking approved public sources…</p>
+              <p>Checking relevant sources and preparing your answer…</p>
             </article>
           )}
         </div>
@@ -172,13 +191,13 @@ export default function ChatPanel() {
         <div className="composer-bottom">
           <span>Do not include passwords or sensitive personal information.</span>
           <button className="send-button" type="submit" disabled={!question.trim() || isSending}>
-            {isSending ? "Searching…" : "Send"} <span aria-hidden="true">→</span>
+            {isSending ? "Thinking…" : "Send"} <span aria-hidden="true">→</span>
           </button>
         </div>
       </form>
       <p className="prototype-notice">
-        Early retrieval prototype: answers show relevant passages from a small approved source list.
-        Always verify important requirements with the responsible agency.
+        PNG public-service answers should be checked against the cited agency sources.
+        General background is not an official government determination.
       </p>
     </section>
   );
