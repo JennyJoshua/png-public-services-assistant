@@ -40,6 +40,13 @@ The API accepts a bounded recent history of user and assistant messages. It does
 - Model-generated answers are not legal advice or an official government determination.
 - Provider keys remain server-side and must never be committed to Git.
 
-## Current limitation
+## Deployment status
 
-The Groq adapter is implemented but requires the owner to create an API key and add it as the private `MODEL_API_KEY` environment variable on the backend hosting service. The application can continue serving retrieved source excerpts in the meantime.
+The Groq provider defaults and adapter are implemented on the feature branch. The owner has added `MODEL_API_KEY` to the Render backend service using Save Only; that stores the secret but does not apply it to the running service until a deployment occurs. The feature branch has not been merged, and no production deployment has been authorized. After explicit merge and deployment approval, the backend can be deployed and tested with real questions.
+
+## Current limitations
+
+- The current retrieval pilot checks only seven exact seed URLs and does not crawl their linked subpages.
+- Retrieval uses basic keyword overlap and can miss relevant material.
+- No conversation persistence or document generation is implemented.
+- Document generation remains deferred until the owner supplies approved sample documents.
