@@ -1,13 +1,14 @@
+import Link from "next/link";
 import ChatPanel from "./ChatPanel";
 
 export default function Home() {
   return (
     <main className="page-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="PNG Public Services Assistant home">
+        <Link className="brand" href="/" aria-label="PNG Public Services Assistant home">
           <span className="brand-mark" aria-hidden="true">P</span>
           <span>PNG Public Services Assistant</span>
-        </a>
+        </Link>
         <span className="prototype-label">Early prototype</span>
       </header>
 
