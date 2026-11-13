@@ -12,6 +12,17 @@ The first retrieval slice uses a small, curated set of official PNG public-servi
 - National and Supreme Courts of Papua New Guinea — https://www.pngjudiciary.gov.pg/
 - Land Commission of Papua New Guinea — https://www.landcommission.gov.pg/
 
+## Focused business-registration source addition
+The Investment Promotion Authority (IPA), through the Papua New Guinea Registry Services portal, is the primary source for company and business-name registration information. The following exact IPA pages are approved:
+- Business-name registration and PNG/overseas company incorporation instructions — https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo
+- Prescribed forms and fees — https://www.ipa.gov.pg/public/prescribedforms.aspx?lang=en-US
+- Registry forms and filing guidance — https://www.ipa.gov.pg/public/help.aspx?cn=FormsForDownload
+- General business registration, regulation and certification guidance — https://www.ipa.gov.pg/public/help.aspx?cn=BusinessRegulations
+
+The how-to guide distinguishes registering a business name from incorporating a company. A business-name application asks for up to three proposed names, applicant name and address, owner details (or an IPA registration number for an owner that is already a registered entity), business addresses, primary business activity and declarations. Online filing requires a Registry client account; the guide says an account can be created free and requires photo ID. A proposed company name must be reserved and approved before proceeding with incorporation. Company information includes contact and address details, directors, shareholders and a company constitution. Foreign-investor certification may be separately required for foreign enterprises.
+
+The prescribed-forms page distinguishes the fee for business-name registration (Form A-17) from company incorporation (Form A-1), and lists different online and paper amounts where applicable. The assistant must only state a fee when the retrieved IPA fee table clearly identifies the relevant entity/form and filing method. Never present a business-name fee as a company-incorporation fee or vice versa. The forms page is expected to be rechecked because fees can change.
+
 ## Focused identity-registration source addition
 The following five exact pages from the Papua New Guinea Civil and Identity Registry (PNGCIR) are included because PNGCIR is the official registry responsible for civil registration and National Identity Cards:
 - Registry overview — https://pngcir.gov.pg/
@@ -23,7 +34,7 @@ The following five exact pages from the Papua New Guinea Civil and Identity Regi
 The registration instructions state that full online registration is not possible because fingerprint and identity capture must be completed in person. They direct applicants to download and complete the relevant form and lodge it at the nearest Civil and Identity Registry office. The page also says the form should be printed double-sided and completed in blue biro. The fees page is included as an official source, but the assistant must not state a fee amount unless it can retrieve readable, current fee evidence from that page.
 
 ## Source verification and maintenance
-These URLs were checked against the institutions' official presence or PNG government domain references when the pilot source list was prepared. Each source must be rechecked periodically. A government domain does not guarantee that every page is current or that every statement is legally authoritative.
+These URLs were checked against the institutions' official presence or PNG government domain references when the pilot source list was prepared. Each source must be rechecked periodically. A government domain does not guarantee that every page is current or that every statement is legally authoritative for every situation.
 
 ## Retrieval behavior
 - Fetch only the exact HTTPS seed URLs in the source registry.
