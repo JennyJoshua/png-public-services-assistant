@@ -1,5 +1,6 @@
 """Live retrieval over curated PNG sources, with an optional grounded model layer."""
 import asyncio
+import math
 import re
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -13,7 +14,7 @@ from app.source_registry import SOURCES
 MAX_PAGE_BYTES = 1_500_000
 MAX_TEXT_CHARS = 24_000
 MAX_PASSAGE_CHARS = 1_400
-MAX_SNIPPETS = 8
+MAX_SNIPPETS = 12
 STOP_WORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does",
     "for", "from", "how", "i", "in", "is", "it", "me", "my", "of", "on",
@@ -147,52 +148,110 @@ def _passage_blocks(page_text: str) -> list[str]:
 
 
 def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
+    """Rank relevant passages with BM25 and add nearby context from the same page.
+
+    Context expansion is deliberately topic-independent: a matching heading or
+    paragraph can bring along adjacent checklist items, table rows, and
+    explanations that would otherwise be lost when a page is split into blocks.
+    """
     query_tokens = _query_tokens(question)
     if not query_tokens:
         return []
 
-    is_nid_question = _is_nid_question(query_tokens)
-    is_business_question = _is_business_registration_question(query_tokens)
-    ranked: list[dict] = []
-    for page in pages:
-        source_text = f"{page.get('title', '')} {page.get('url', '')}".lower()
-        source_boost = 0
-        if is_nid_question and "pngcir.gov.pg" in source_text:
-            source_boost += 12
-        if is_nid_question and ("nid-registration-information" in source_text or "registration information" in source_text):
-            source_boost += 10
-        if is_business_question and "ipa.gov.pg" in source_text:
-            source_boost += 16
-        if is_business_question and any(term in source_text for term in ("registerbusinessname", "businessregulations", "prescribedforms")):
-            source_boost += 8
+    documents: list[dict] = []
+    document_frequency: dict[str, int] = {}
+    total_length = 0
 
-        for passage in _passage_blocks(page["text"]):
-            if len(passage) < 35:
+    for page_index, page in enumerate(pages):
+        title_tokens = _tokens(str(page.get("title", "")))
+        for passage_index, passage in enumerate(_passage_blocks(page.get("text", ""))):
+            if len(passage) < 25:
                 continue
-            passage_tokens = _tokens(passage)
-            overlap = query_tokens & passage_tokens
-            if not overlap:
+            tokens = re.findall(r"[a-z0-9]{2,}", passage.lower())
+            frequencies: dict[str, int] = {}
+            for token in tokens:
+                if token not in STOP_WORDS:
+                    frequencies[token] = frequencies.get(token, 0) + 1
+            if not frequencies:
                 continue
-            score = sum(3 if token in passage.lower() else 1 for token in overlap)
-            score += source_boost
-            # Prefer passages that explain an action, rather than generic mentions of an ID.
-            if is_nid_question and any(term in passage.lower() for term in ("download", "lodge", "registration form", "fingerprint", "capture")):
-                score += 5
-            if is_business_question and any(term in passage.lower() for term in ("proposed business name", "owners", "principal place of business", "directors", "shareholders", "company constitution", "client account")):
-                score += 6
-            ranked.append({"score": score, "text": passage, "source": page})
+            documents.append({
+                "page_index": page_index,
+                "passage_index": passage_index,
+                "text": passage,
+                "tokens": frequencies,
+                "length": sum(frequencies.values()),
+                "title_tokens": title_tokens,
+                "source": page,
+            })
+            total_length += sum(frequencies.values())
+            for token in set(frequencies):
+                document_frequency[token] = document_frequency.get(token, 0) + 1
+
+    if not documents:
+        return []
+
+    # BM25 gives longer passages a length-normalized relevance score and
+    # down-weights terms that occur in almost every passage.
+    average_length = total_length / len(documents)
+    k1 = 1.5
+    b = 0.75
+    ranked: list[dict] = []
+    for document in documents:
+        score = 0.0
+        for token in query_tokens:
+            frequency = document["tokens"].get(token, 0)
+            if not frequency:
+                continue
+            doc_frequency = document_frequency.get(token, 0)
+            inverse_frequency = math.log(
+                1 + (len(documents) - doc_frequency + 0.5) / (doc_frequency + 0.5)
+            )
+            denominator = frequency + k1 * (
+                1 - b + b * document["length"] / max(average_length, 1)
+            )
+            score += inverse_frequency * (frequency * (k1 + 1)) / denominator
+        title_overlap = query_tokens & document["title_tokens"]
+        score += 1.5 * len(title_overlap)
+        if score > 0:
+            ranked.append({**document, "score": score})
+
+    if not ranked:
+        return []
 
     ranked.sort(key=lambda item: item["score"], reverse=True)
-    selected: list[dict] = []
-    seen: set[tuple[str, str]] = set()
-    for item in ranked:
-        key = (item["source"]["url"], item["text"])
-        if key in seen:
-            continue
-        seen.add(key)
-        selected.append(item)
+
+    # Expand the strongest matches with nearby passages from the same source
+    # page. This preserves the surrounding context of multi-line instructions
+    # and lists without writing a rule for each public-service topic.
+    selected_scores: dict[tuple[int, int], float] = {}
+    document_lookup = {
+        (item["page_index"], item["passage_index"]): item for item in documents
+    }
+    for seed in ranked[:3]:
+        page_index = seed["page_index"]
+        center = seed["passage_index"]
+        for offset in range(-6, 7):
+            position = center + offset
+            key = (page_index, position)
+            neighbour = document_lookup.get(key)
+            if neighbour is None:
+                continue
+            contextual_score = seed["score"] / (1 + abs(offset) * 0.35)
+            selected_scores[key] = max(selected_scores.get(key, 0), contextual_score)
+
+    selected = []
+    for key, score in sorted(
+        selected_scores.items(), key=lambda item: item[1], reverse=True
+    ):
+        item = document_lookup[key]
+        selected.append({
+            "score": score,
+            "text": item["text"],
+            "source": item["source"],
+        })
         if len(selected) >= MAX_SNIPPETS:
             break
+
     return selected
 
 
