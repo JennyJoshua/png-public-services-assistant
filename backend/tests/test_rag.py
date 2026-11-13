@@ -139,7 +139,7 @@ def test_nid_abbreviation_ranks_official_registration_instructions() -> None:
         "last_checked_at": "2026-11-13T00:00:00+00:00",
         "text": (
             "Normal registration: Download the Registration Form, fill in the details "
-            "and lodge it at your nearest Civil and Identity Registry Office.\\n"
+            "and lodge it at your nearest Civil and Identity Registry Office.\n"
             "Full online registration is not possible because fingerprint and ID capture "
             "must be completed in person."
         ),
