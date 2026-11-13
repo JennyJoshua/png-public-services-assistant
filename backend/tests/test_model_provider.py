@@ -3,17 +3,27 @@ import asyncio
 import pytest
 
 from app.model_provider import (
+    DEFAULT_MODEL_API_BASE_URL,
+    DEFAULT_MODEL_NAME,
     ModelProviderError,
     _build_messages,
+    _provider_settings,
     generate_answer,
     model_is_configured,
 )
 
 
-def test_model_is_not_configured_without_all_secrets(monkeypatch) -> None:
-    for name in ("MODEL_API_BASE_URL", "MODEL_API_KEY", "MODEL_NAME"):
-        monkeypatch.delenv(name, raising=False)
+def test_groq_defaults_are_selected_without_exposing_a_key(monkeypatch) -> None:
+    monkeypatch.delenv("MODEL_API_BASE_URL", raising=False)
+    monkeypatch.delenv("MODEL_NAME", raising=False)
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    assert _provider_settings() == (DEFAULT_MODEL_API_BASE_URL, "", DEFAULT_MODEL_NAME)
     assert model_is_configured() is False
+
+
+def test_model_is_configured_when_private_key_is_present(monkeypatch) -> None:
+    monkeypatch.setenv("MODEL_API_KEY", "test-only")
+    assert model_is_configured() is True
 
 
 def test_prompt_distinguishes_official_evidence_from_general_knowledge() -> None:
@@ -44,7 +54,6 @@ def test_prompt_limits_history_and_ignores_invalid_roles() -> None:
 def test_configured_model_provider_requires_https(monkeypatch) -> None:
     monkeypatch.setenv("MODEL_API_BASE_URL", "http://model.example/v1")
     monkeypatch.setenv("MODEL_API_KEY", "test-only")
-    monkeypatch.setenv("MODEL_NAME", "test-model")
 
     with pytest.raises(ModelProviderError, match="HTTPS"):
         asyncio.run(generate_answer("Hello", [], []))
