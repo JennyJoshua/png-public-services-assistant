@@ -32,7 +32,8 @@ def _build_messages(
     remaining = MAX_EVIDENCE_CHARS
     for index, item in enumerate(evidence, start=1):
         text = str(item.get("text", ""))[:1800]
-        block = f"[{index}] {text}"
+        citation_number = item.get("citation_index", index)
+        block = f"[{citation_number}] {text}"
         if len(block) > remaining:
             break
         evidence_parts.append(block)
