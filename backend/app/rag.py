@@ -42,7 +42,7 @@ def _query_tokens(question: str) -> set[str]:
     if is_nid_wording:
         tokens.update({"nid", "national", "identity", "id", "card", "registration", "form"})
     # Normalize common business-registration wording for the IPA guidance.
-    business_terms = {"business", "company", "incorporation", "incorporate", "registering", "registration", "registered"}
+    business_terms = {"business", "businesses", "company", "companies", "incorporation", "incorporate", "registering"}
     if tokens & business_terms:
         tokens.update({"business", "businesses", "name", "company", "companies", "registration", "register", "registering", "incorporation", "incorporate", "ipa"})
     return tokens
