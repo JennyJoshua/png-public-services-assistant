@@ -237,3 +237,24 @@ def test_page_text_extracts_fee_table_rows() -> None:
     """
     text, _ = _page_text(html)
     assert "A-17 K150 K200" in text
+
+
+def test_nid_registration_does_not_trigger_ipa_business_boost() -> None:
+    pages = [{
+        "institution": "Papua New Guinea Civil and Identity Registry",
+        "title": "PNGCIR — NID Registration Information",
+        "url": "https://pngcir.gov.pg/nid-registration-information/",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": "Download the National Identity registration form and lodge it at the registry office for fingerprint capture.",
+    }, {
+        "institution": "Investment Promotion Authority",
+        "title": "IPA — Business Name Registration and Company Incorporation Guide",
+        "url": "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
+        "publication_date": None,
+        "last_checked_at": "2026-11-14T00:00:00+00:00",
+        "text": "Registering a business name requires proposed names, owner details and business addresses.",
+    }]
+    results = _rank_passages("How do I apply for a National ID?", pages)
+    assert results
+    assert results[0]["source"]["institution"] == "Papua New Guinea Civil and Identity Registry"
