@@ -4,7 +4,7 @@
 >
 > **Last updated:** 13 November 2026
 > **Repository:** https://github.com/JennyJoshua/png-public-services-assistant
-> **Project status:** Planning/specification stage. Initial engineering-specification pull request is open and unmerged.
+> **Project status:** Phase 1 implementation preparation. Specification PR #1 is merged; foundation branch phase-1/foundation is open. No application code or deployment has been completed.
 
 ## 1. Project identity and purpose
 
@@ -288,11 +288,12 @@ When continuing this project in a new chat:
 
 ## 14. Immediate next actions
 
-1. Review the complete contents of PR #1, including this handover file after it is added.
-2. Resolve minor documentation review comments as appropriate.
-3. Obtain the owner's explicit approval before merging PR #1.
-4. After merge, prepare a concrete Phase 1 implementation breakdown and begin the foundation on a separate branch.
-5. Keep model/hosting selection evidence-based and free-first; escalate any paid requirement for approval before proceeding.
+1. Treat PR #1 as merged and main as the approved documentation baseline.
+2. Continue Phase 1 work only on phase-1/foundation or subsequent feature branches.
+3. Follow docs/implementation/PHASE_1_IMPLEMENTATION_BREAKDOWN.md and test each work package.
+4. Keep model, database, and hosting decisions evidence-based and free-first; escalate paid requirements for approval.
+5. Submit implementation work through a PR and obtain explicit approval before merging to main.
+6. Obtain explicit approval before production deployment, destructive operations, paid services, or material scope/architecture changes.
 
 ---
 **End of project handover.**
