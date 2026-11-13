@@ -31,7 +31,7 @@ def _tokens(value: str) -> set[str]:
 
 
 def _query_tokens(question: str) -> set[str]:
-    """Add narrow vocabulary bridges for common PNG public-service wording."""
+    """Normalize common abbreviations and equivalent public-service terms."""
     tokens = _tokens(question)
     # Treat common NID wording as one concept so abbreviated and expanded
     # questions retrieve the same official registration guidance.
@@ -47,18 +47,6 @@ def _query_tokens(question: str) -> set[str]:
     if tokens & business_terms:
         tokens.update({"business", "businesses", "name", "company", "companies", "registration", "register", "registering", "incorporation", "incorporate", "ipa"})
     return tokens
-
-
-def _is_nid_question(query_tokens: set[str]) -> bool:
-    return (
-        "nid" in query_tokens
-        or ("national" in query_tokens and ("id" in query_tokens or "identity" in query_tokens))
-        or ("identity" in query_tokens and "card" in query_tokens)
-    )
-
-
-def _is_business_registration_question(query_tokens: set[str]) -> bool:
-    return bool(query_tokens & {"business", "businesses", "company", "companies", "incorporation", "incorporate"})
 
 
 def _page_text(html: str) -> tuple[str, str | None]:
@@ -212,6 +200,9 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
             score += inverse_frequency * (frequency * (k1 + 1)) / denominator
         title_overlap = query_tokens & document["title_tokens"]
         score += 1.5 * len(title_overlap)
+        source_host = (urlparse(str(document["source"].get("url", ""))).hostname or "").lower()
+        if source_host.endswith(".gov.pg"):
+            score += 2.0
         if score > 0:
             ranked.append({**document, "score": score})
 
