@@ -134,26 +134,38 @@ def extract_passages(html: str) -> tuple[str | None, list[tuple[tuple[str, ...],
 
 
 async def _get_same_host(
-    client: httpx.AsyncClient, url: str, expected_host: str
+    client: httpx.AsyncClient, url: str, expected_host: str, *, max_bytes: int
 ) -> httpx.Response:
-    """Follow a small number of HTTPS redirects, never crossing the seed host."""
+    """Follow bounded HTTPS redirects and stream no more than max_bytes."""
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         parsed = urlparse(current)
         if parsed.scheme != "https" or (parsed.hostname or "").lower() != expected_host:
             raise IndexBuildError("redirect left the approved HTTPS source host")
-        response = await client.get(current, follow_redirects=False)
-        if response.status_code not in REDIRECT_STATUSES:
-            return response
-        location = response.headers.get("location")
-        if not location:
-            raise IndexBuildError("redirect response did not include a location")
-        current = urljoin(current, location)
+        async with client.stream("GET", current, follow_redirects=False) as streamed:
+            if streamed.status_code in REDIRECT_STATUSES:
+                location = streamed.headers.get("location")
+                if not location:
+                    raise IndexBuildError("redirect response did not include a location")
+                current = urljoin(current, location)
+                continue
+
+            body = bytearray()
+            async for chunk in streamed.aiter_bytes():
+                if len(body) + len(chunk) > max_bytes:
+                    raise IndexBuildError("response exceeded configured byte limit")
+                body.extend(chunk)
+            return httpx.Response(
+                status_code=streamed.status_code,
+                headers=streamed.headers,
+                content=bytes(body),
+                request=streamed.request,
+            )
     raise IndexBuildError("source exceeded the redirect limit")
 
 
 async def _robots_allowed(
-    client: httpx.AsyncClient, url: str, robots_cache: dict[str, RobotFileParser | None],
+    client: httpx.AsyncClient, url: str, robots_cache: dict[str, RobotFileParser | None | bool],
     robots_lock: asyncio.Lock,
 ) -> bool:
     parsed = urlparse(url)
@@ -163,7 +175,7 @@ async def _robots_allowed(
         if origin not in robots_cache:
             parser = RobotFileParser()
             try:
-                response = await _get_same_host(client, f"{origin}/robots.txt", host)
+                response = await _get_same_host(client, f"{origin}/robots.txt", host, max_bytes=256_000)
                 if response.status_code == 404:
                     robots_cache[origin] = None
                 elif response.status_code == 200:
@@ -206,7 +218,7 @@ async def _fetch_one(
                 return [], audit
 
             expected_host = (urlparse(source.url).hostname or "").lower()
-            response = await _get_same_host(client, source.url, expected_host)
+            response = await _get_same_host(client, source.url, expected_host, max_bytes=MAX_PAGE_BYTES)
             audit["final_url"] = str(response.url)
             audit["http_status"] = response.status_code
             audit["response_bytes"] = len(response.content)
@@ -315,7 +327,7 @@ def write_build_outputs(
     artifact: bytes, manifest: dict[str, Any], output_path: str | Path,
     manifest_path: str | Path,
 ) -> None:
-    """Write both outputs via temporary files so incomplete writes are not published."""
+    """Write each output through a temporary file before replacing its destination."""
     output = Path(output_path)
     audit = Path(manifest_path)
     output.parent.mkdir(parents=True, exist_ok=True)
