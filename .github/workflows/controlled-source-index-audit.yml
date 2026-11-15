@@ -1,0 +1,113 @@
+name: Controlled source index audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      index_version:
+        description: "Immutable label for this audit run"
+        required: true
+        default: "png-public-services-2026-11-audit-1"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: controlled-source-index-audit
+  cancel-in-progress: false
+
+jobs:
+  build-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out approved code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install project dependencies
+        working-directory: backend
+        run: python -m pip install -r requirements.txt
+
+      - name: Build and validate index locally on ephemeral runner
+        working-directory: backend
+        env:
+          INDEX_VERSION: ${{ inputs.index_version }}
+        run: |
+          set -euo pipefail
+          cleanup() {
+            rm -rf data
+          }
+          trap cleanup EXIT
+
+          python scripts/build_index.py \
+            --index-version "$INDEX_VERSION" \
+            --min-sources 1
+
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from app.index_artifact import load_index_artifact
+
+          artifact_path = Path("data/public-services-index-v1.json")
+          manifest_path = Path("data/public-services-index-v1.manifest.json")
+
+          validated = load_index_artifact(artifact_path)
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+          if len(validated.records) != manifest["record_count"]:
+              raise SystemExit("Validated record count does not match audit manifest")
+
+          print("SCHEMA_VALIDATION=PASS")
+          print(f"INDEX_VERSION={manifest['index_version']}")
+          print(f"REGISTRY_SOURCE_COUNT={manifest['registry_source_count']}")
+          print(f"INDEXED_SOURCE_COUNT={manifest['indexed_source_count']}")
+          print(f"FAILED_SOURCE_COUNT={manifest['failed_source_count']}")
+          print(f"PASSAGE_COUNT={manifest['record_count']}")
+          print(f"ARTIFACT_SHA256={manifest['artifact_sha256']}")
+          print("")
+          print("SOURCE AUDIT (metadata only; no page text):")
+          for source in manifest["sources"]:
+              print(
+                  f"- {source['institution']} | {source['registry_title']} | "
+                  f"{source['status']} | HTTP {source['http_status']} | "
+                  f"passages={source['passage_count']} | "
+                  f"reason={source['reason'] or 'none'}"
+              )
+
+          summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          lines = [
+              "## Controlled source index audit",
+              "",
+              "- Schema validation: PASS",
+              f"- Index version: {manifest['index_version']}",
+              f"- Registry pages attempted: {manifest['registry_source_count']}",
+              f"- Pages indexed: {manifest['indexed_source_count']}",
+              f"- Pages failed: {manifest['failed_source_count']}",
+              f"- Passages: {manifest['record_count']}",
+              f"- Artifact SHA-256: {manifest['artifact_sha256']}",
+              "",
+              "| Institution | Registry page | Result | HTTP | Passages | Reason |",
+              "|---|---|---:|---:|---:|---|",
+          ]
+          for source in manifest["sources"]:
+              safe = lambda value: str(value or "—").replace("|", "\\|").replace("\n", " ")
+              lines.append(
+                  f"| {safe(source['institution'])} | {safe(source['registry_title'])} | "
+                  f"{safe(source['status'])} | {safe(source['http_status'])} | "
+                  f"{source['passage_count']} | {safe(source['reason'])} |"
+              )
+          summary.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+
+      - name: Confirm generated corpus is not retained
+        if: always()
+        working-directory: backend
+        run: rm -rf data
