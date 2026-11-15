@@ -13,6 +13,9 @@ __pycache__/
 .venv/
 venv/
 
+# Generated source-content index artifacts (keep private/local unless separately approved)
+backend/data/
+
 # Environment and secrets
 .env
 .env.*
