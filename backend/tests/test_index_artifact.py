@@ -126,7 +126,7 @@ def test_builder_rejects_invalid_or_timezone_naive_timestamp(timestamp):
 
 def test_loader_rejects_duplicate_json_keys(tmp_path):
     valid = build_index_artifact(sample_records(), index_version="fixture-1", generated_at=GENERATED_AT).decode()
-    duplicate = valid.replace('"schema_version":1,', '"schema_version":1,"schema_version":1,', 1)
+    duplicate = valid.replace('"schema_version":1', '"schema_version":1,"schema_version":1', 1)
     path = tmp_path / "duplicate.json"
     path.write_text(duplicate, encoding="utf-8")
     with pytest.raises(IndexArtifactError, match="duplicate JSON object key"):
@@ -143,7 +143,6 @@ def test_loader_rejects_non_standard_json_constants(tmp_path):
 def test_loader_rejects_non_string_source_url_without_leaking_type_error(tmp_path):
     payload = json.loads(build_index_artifact(sample_records(), index_version="fixture-1", generated_at=GENERATED_AT))
     payload["records"][0]["source_url"] = 42
-    # Recompute the envelope digest so validation reaches the record-field check.
     from app.index_artifact import _canonical_json, _sha256
     payload["records_sha256"] = _sha256(_canonical_json(payload["records"]))
     with pytest.raises(IndexArtifactError, match="source_url"):
