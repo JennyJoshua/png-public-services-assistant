@@ -41,10 +41,6 @@ jobs:
           INDEX_VERSION: ${{ inputs.index_version }}
         run: |
           set -euo pipefail
-          cleanup() {
-            rm -rf data
-          }
-          trap cleanup EXIT
 
           python scripts/build_index.py \
             --index-version "$INDEX_VERSION" \
