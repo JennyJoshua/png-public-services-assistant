@@ -59,7 +59,7 @@ def test_fetch_one_indexes_only_robots_allowed_exact_registry_source():
                 "<html><head><title>Government Service</title></head><body><main>"
                 "<h1>Public services</h1>"
                 "<p>The National Information Centre provides official public service "
-                "information and government updates for citizens and businesses.</p>"
+                "information and government updates for citizens and businesses.</p><p>Citizens can access government information through the official public service channels.</p>"
                 "</main></body></html>"
             ),
             request=request,
@@ -88,7 +88,7 @@ def test_fetch_one_does_not_fetch_when_robots_disallows_seed_url():
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal page_requested
         if request.url.path == "/robots.txt":
-            return httpx.Response(200, text="User-agent: *\\nDisallow: /home/", request=request)
+            return httpx.Response(200, text="User-agent: *\nDisallow: /home/", request=request)
         page_requested = True
         return httpx.Response(200, text="<html><body>Should not fetch</body></html>", request=request)
 
