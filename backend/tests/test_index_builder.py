@@ -119,5 +119,5 @@ def test_fetch_one_rejects_cross_host_redirect_without_following_it():
 
     records, audit = asyncio.run(run())
     assert records == []
-    assert "redirect left the approved HTTPS source host" in audit["reason"]
+    assert "redirect left the approved HTTPS source origin" in audit["reason"]
     assert set(requested_hosts) == {httpx.URL(source.url).host}
