@@ -70,3 +70,16 @@
 - New subject coverage should primarily be added through approved sources and evaluation fixtures.
 - No synthetic evaluation results represented as production performance.
 - No merges, production deployments, paid services, destructive actions or database migrations without explicit owner approval.
+
+
+## GitHub tracking issues
+
+- [Batch 0 — Baseline and Render index validation](https://github.com/JennyJoshua/png-public-services-assistant/issues/15)
+- [Batch 1 — General retrieval foundation](https://github.com/JennyJoshua/png-public-services-assistant/issues/16)
+- [Batch 2 — Governed source ingestion and versioned index](https://github.com/JennyJoshua/png-public-services-assistant/issues/17)
+- [Batch 3 — Bounded adaptive retrieval](https://github.com/JennyJoshua/png-public-services-assistant/issues/18)
+- [Batch 4 — Evidence verification and safe answers](https://github.com/JennyJoshua/png-public-services-assistant/issues/19)
+- [Batch 5 — Operational reliability, privacy and security](https://github.com/JennyJoshua/png-public-services-assistant/issues/20)
+- [Batch 6 — Evaluation and release readiness](https://github.com/JennyJoshua/png-public-services-assistant/issues/21)
+
+The issues are planning and tracking records. They do not independently authorise merges, deployments, paid services, destructive actions or database migrations.
