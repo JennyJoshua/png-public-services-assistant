@@ -72,6 +72,7 @@ jobs:
           print(f"FAILED_SOURCE_COUNT={manifest['failed_source_count']}")
           print(f"PASSAGE_COUNT={manifest['record_count']}")
           print(f"ARTIFACT_SHA256={manifest['artifact_sha256']}")
+          print(f"ARTIFACT_BYTES={artifact_path.stat().st_size}")
           print("")
           print("SOURCE AUDIT (metadata only; no page text):")
           for source in manifest["sources"]:
@@ -106,6 +107,10 @@ jobs:
               )
           summary.write_text("\n".join(lines) + "\n", encoding="utf-8")
           PY
+
+      - name: Profile artifact loading and temporary replacement rollback
+        working-directory: backend
+        run: python scripts/profile_index_artifact.py data/public-services-index-v1.json
 
       - name: Confirm generated corpus is not retained
         if: always()
