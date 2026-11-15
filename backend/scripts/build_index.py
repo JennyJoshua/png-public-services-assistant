@@ -41,12 +41,12 @@ def main() -> int:
             )
         write_build_outputs(artifact, manifest, args.output, args.manifest)
     except (IndexBuildError, OSError) as exc:
-        parser.exit(1, f"Index build failed: {exc}\\n")
+        parser.exit(1, f"Index build failed: {exc}\n")
 
     print(
         f"Built {manifest['record_count']} passages from "
         f"{manifest['indexed_source_count']}/{manifest['registry_source_count']} "
-        f"approved source pages.\\nArtifact: {args.output}\\nManifest: {args.manifest}"
+        f"approved source pages.\nArtifact: {args.output}\nManifest: {args.manifest}"
     )
     return 0
 
