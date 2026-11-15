@@ -63,11 +63,16 @@ No unbounded agent/tool loop, model training, unrestricted crawling, arbitrary U
 - **Phase 4 — Verification:** claim-to-passage mapping, high-risk fact checks, abstention and fallback.
 - **Phase 5 — Operational readiness:** quotas, monitoring, privacy, human-reviewed evaluation and release decision.
 
-## Existing pull requests
+## Existing pull-request reconciliation
 
-- PR #11 is intermediate work. Retain the central system prompt and generalisation direction, but correct retrieval ordering, short-passage handling, ranking and evidence selection before merge.
-- PR #10's IPA-specific retrieval rule is excluded. Preserve useful official IPA checklist examples as general evaluation fixtures.
-- Neither PR is approved for merge by this roadmap.
+The following status supersedes the historical PR notes that were written before the later implementation work:
+
+- **PR #10** remains open and unmerged. Its IPA-specific retrieval rule remains excluded. Preserve useful official IPA checklist cases as general evaluation fixtures; do not merge the old branch.
+- **PR #11** remains open and unmerged as an intermediate branch. Its central system-prompt and generalisation direction was partly delivered through merged PR #23. Do not merge the old branch as-is; reconcile any remaining useful changes against current main.
+- **PR #13** remains open as a draft and is superseded by the approved baseline published through merged PR #14.
+- **PR #14** published the approved specification, reconciled decision/roadmap and implementation backlog.
+- **PR #22** remains open and unmerged as an earlier artifact prototype; its strict artifact foundation was superseded by merged PR #24. Do not merge the old branch.
+- **PRs #23–#27** are merged. They establish the general retrieval foundation, strict artifact schema/loader, approved-source index builder, controlled ephemeral audit workflow, and audit CLI import-path correction respectively. Their merge does not mean the associated backlog acceptance criteria are all complete.
 
 ## Data Analysis rule
 
