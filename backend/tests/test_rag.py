@@ -298,7 +298,7 @@ def test_short_meaningful_checklist_labels_are_not_discarded() -> None:
         "url": "https://example.org/identification",
         "publication_date": None,
         "last_checked_at": "2026-11-15T00:00:00+00:00",
-        "text": "ID\\nBring the original document to the counter.",
+        "text": "ID\nBring the original document to the counter.",
     }
     results = _rank_passages("What ID identification is required?", [page])
     assert any(item["text"] == "ID" for item in results)
