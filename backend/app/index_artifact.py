@@ -105,7 +105,7 @@ def build_index_artifact(
         "records_sha256": _sha256(canonical_records),
         "records": records,
     }
-    return _canonical_json(envelope) + b"\\n"
+    return _canonical_json(envelope) + b"\n"
 
 
 def load_index_artifact(path: str | Path) -> IndexArtifact:
