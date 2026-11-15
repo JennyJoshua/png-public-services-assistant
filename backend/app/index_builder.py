@@ -194,7 +194,7 @@ async def _robots_allowed(
 
 async def _fetch_one(
     client: httpx.AsyncClient, source: Any,
-    robots_cache: dict[str, RobotFileParser | None], robots_lock: asyncio.Lock,
+    robots_cache: dict[str, RobotFileParser | None | bool], robots_lock: asyncio.Lock,
     semaphore: asyncio.Semaphore,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     checked_at = datetime.now(timezone.utc).isoformat()
@@ -286,7 +286,7 @@ async def build_representative_index(
     timeout = httpx.Timeout(12.0, connect=5.0)
     limits = httpx.Limits(max_connections=MAX_CONCURRENCY, max_keepalive_connections=MAX_CONCURRENCY)
     headers = {"User-Agent": USER_AGENT, "Accept": "text/html"}
-    robots_cache: dict[str, RobotFileParser | None] = {}
+    robots_cache: dict[str, RobotFileParser | None | bool] = {}
     robots_lock = asyncio.Lock()
     semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
 
