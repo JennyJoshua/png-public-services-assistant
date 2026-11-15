@@ -245,18 +245,31 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
             contextual_score = seed["score"] / (1 + abs(offset) * 0.35)
             selected_scores[key] = max(selected_scores.get(key, 0), contextual_score)
 
+    # Rank source pages by their strongest match, but preserve passage order
+    # within each page. This keeps procedural steps and table context in order.
+    page_scores: dict[int, float] = {}
+    for (page_index, _), score in selected_scores.items():
+        page_scores[page_index] = max(page_scores.get(page_index, 0.0), score)
+
     selected = []
-    for key, score in sorted(
-        selected_scores.items(), key=lambda item: item[1], reverse=True
-    ):
-        item = document_lookup[key]
-        selected.append({
-            "score": score,
-            "text": item["text"],
-            "source": item["source"],
-        })
-        if len(selected) >= MAX_SNIPPETS:
-            break
+    for page_index in sorted(page_scores, key=page_scores.get, reverse=True):
+        page_items = sorted(
+            (
+                (passage_index, score)
+                for (candidate_page, passage_index), score in selected_scores.items()
+                if candidate_page == page_index
+            ),
+            key=lambda item: item[0],
+        )
+        for passage_index, score in page_items:
+            item = document_lookup[(page_index, passage_index)]
+            selected.append({
+                "score": score,
+                "text": item["text"],
+                "source": item["source"],
+            })
+            if len(selected) >= MAX_SNIPPETS:
+                return selected
 
     return selected
 
