@@ -1,10 +1,18 @@
-"""CLI: run from the backend directory with python scripts/build_index.py."""
+"""CLI for building a local artifact from approved PNG public-service sources."""
 from __future__ import annotations
 
 import argparse
 import asyncio
+import sys
+from pathlib import Path
 
-from app.index_builder import (
+# Running a file by path places backend/scripts on sys.path, not backend.
+# Add the backend package root explicitly so this CLI works from any cwd.
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from app.index_builder import (  # noqa: E402
     IndexBuildError,
     build_representative_index,
     write_build_outputs,
@@ -33,12 +41,12 @@ def main() -> int:
             )
         write_build_outputs(artifact, manifest, args.output, args.manifest)
     except (IndexBuildError, OSError) as exc:
-        parser.exit(1, f"Index build failed: {exc}\n")
+        parser.exit(1, f"Index build failed: {exc}\\n")
 
     print(
         f"Built {manifest['record_count']} passages from "
         f"{manifest['indexed_source_count']}/{manifest['registry_source_count']} "
-        f"approved source pages.\nArtifact: {args.output}\nManifest: {args.manifest}"
+        f"approved source pages.\\nArtifact: {args.output}\\nManifest: {args.manifest}"
     )
     return 0
 
