@@ -140,8 +140,15 @@ async def _get_same_host(
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         parsed = urlparse(current)
-        if parsed.scheme != "https" or (parsed.hostname or "").lower() != expected_host:
-            raise IndexBuildError("redirect left the approved HTTPS source host")
+        if (
+            parsed.scheme != "https"
+            or (parsed.hostname or "").lower() != expected_host
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.port not in (None, 443)
+            or parsed.fragment
+        ):
+            raise IndexBuildError("redirect left the approved HTTPS source origin")
         async with client.stream("GET", current, follow_redirects=False) as streamed:
             if streamed.status_code in REDIRECT_STATUSES:
                 location = streamed.headers.get("location")
