@@ -39,13 +39,13 @@ def _sha256(value: bytes) -> str:
 
 
 def _normalise_text(value: str) -> str:
-    return re.sub(r"\\s+", " ", value).strip()
+    return re.sub(r"\s+", " ", value).strip()
 
 
 def _split_passage(text: str) -> list[str]:
     if len(text) <= MAX_PASSAGE_CHARS:
         return [text]
-    sentences = re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9])", text)
+    sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", text)
     output: list[str] = []
     current = ""
     for sentence in sentences:
@@ -225,7 +225,7 @@ async def _fetch_one(
                 return [], audit
 
             page_title, passages = extract_passages(response.text)
-            extracted = "\\n".join(text for _, text in passages)
+            extracted = "\n".join(text for _, text in passages)
             if len(extracted) < MIN_EXTRACTED_CHARS:
                 audit["reason"] = "insufficient_extractable_text"
                 return [], audit
@@ -237,7 +237,7 @@ async def _fetch_one(
             for position, (section_path, passage_text) in enumerate(passages):
                 content_hash = _sha256(passage_text.encode("utf-8"))
                 passage_id = "pas_" + _sha256(
-                    f"{document_id}\\0{position}\\0{content_hash}".encode("utf-8")
+                    f"{document_id}\0{position}\0{content_hash}".encode("utf-8")
                 )[:24]
                 records.append({
                     "source_id": source_id,
@@ -324,7 +324,7 @@ def write_build_outputs(
     audit_tmp = audit.with_suffix(audit.suffix + ".tmp")
     output_tmp.write_bytes(artifact)
     audit_tmp.write_text(
-        json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\\n",
+        json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
     output_tmp.replace(output)
