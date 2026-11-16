@@ -12,6 +12,10 @@ The project-owner-approved **Bounded Adaptive RAG Technical Architecture and Int
 
 Implementation proposals and pull requests must be reconciled against these documents. Proposed implementation choices do not override the approved baseline unless the project owner explicitly approves a material change.
 
+## Engineering delivery standard
+
+The proposed [AI-Assisted Continuous Delivery Operating Procedure v1.0](docs/engineering/AI_ASSISTED_CONTINUOUS_DELIVERY.md) defines the delivery process being piloted for this repository. It governs workflow and quality practices only; it does not change the approved RAG architecture, backlog or project-owner approval gates.
+
 ## Product direction
 
 The application provides a conversational interface for:
