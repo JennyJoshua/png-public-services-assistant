@@ -65,7 +65,7 @@ This procedure governs how work is delivered. It does not override a project's a
 Before a new project or major phase:
 - Confirm product objective, target users, MVP boundary and business rules.
 - Identify approved architecture, constraints, licensing and data/security requirements.
-- Identify hosting, database and AI-provider dependencies.
+- Identify hosting, database and AI-provider dependencies. Record the approved provider, free/paid status, model identifier, secret-handling boundary, rate limits, availability risks and fallback behaviour. Do not substitute a paid provider or model without explicit owner approval.
 - Record decisions and unresolved questions in GitHub.
 - Establish a definition of done and the first measurable milestone.
 
@@ -233,6 +233,15 @@ For projects using Render:
 10. Do not interpret missing metrics as zero usage; label unavailable telemetry accurately.
 
 ## 6. Security and data handling
+
+### AI/LLM provider and cost constraints
+
+- Treat the project's approved AI provider and model choice as part of its technical baseline.
+- **PNG Public Services Assistant pilot:** retain the existing free Groq-hosted LLM arrangement. Prefer free models and services; do not introduce a paid OpenAI API dependency, paid Groq tier, paid fallback provider or other recurring AI cost without explicit owner approval.
+- Keep provider API keys server-side. Never expose keys in frontend bundles, source control, issues, logs or client responses.
+- Verify the configured model's current availability, rate limits, request limits, timeout behaviour and provider error handling before relying on it. Record the exact model identifier only after confirming it from non-secret configuration; never reveal credential values.
+- Define safe behaviour when the provider is unavailable or rate-limited (for example, a clear temporary-unavailable response or evidence-based abstention). Do not silently switch to an unapproved provider or model.
+- Do not claim a model, fallback or reliability guarantee is active unless the repository configuration and runtime evidence verify it.
 
 - Apply least privilege to GitHub tokens, CI permissions, Supabase roles and service credentials.
 - Never commit API keys, service-role keys, passwords, private learner/customer data or production database exports.
