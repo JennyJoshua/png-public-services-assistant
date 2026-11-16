@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Sequence
+from urllib.parse import urlsplit
 
 from app.retrieval_contracts import (
     EvidencePassage,
     FetchedDocument,
+    RetrievalContractError,
     SourceClass,
     SourceRecord,
     SourceStatus,
@@ -29,6 +31,11 @@ def _timestamp(value: str) -> datetime:
 def page_to_fetched_document(page: dict) -> FetchedDocument:
     """Convert one successfully fetched allowlisted page into a provenance record."""
     source_url = str(page["url"])
+    final_url = str(page.get("final_url") or source_url)
+    source_host = (urlsplit(source_url).hostname or "").lower()
+    final_host = (urlsplit(final_url).hostname or "").lower()
+    if not source_host or final_host != source_host:
+        raise RetrievalContractError("Fetched page must remain on its registered source host.")
     retrieved_at = _timestamp(str(page["last_checked_at"]))
     source = SourceRecord(
         institution=str(page["institution"]),
@@ -43,7 +50,7 @@ def page_to_fetched_document(page: dict) -> FetchedDocument:
     return FetchedDocument(
         source=source,
         canonical_url=source_url,
-        final_url=str(page.get("final_url") or source_url),
+        final_url=final_url,
         title=str(page["title"]),
         content_type=str(page.get("content_type") or "text/html"),
         text=str(page["text"]),
