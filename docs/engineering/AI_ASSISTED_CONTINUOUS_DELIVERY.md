@@ -217,6 +217,12 @@ For projects using Supabase:
 
 A migration passing locally is not authorisation to apply it to production.
 
+### Standing merge authorization — PNG Public Services Assistant pilot
+
+The project owner has granted ChatGPT standing authority to merge routine pull requests that remain within the approved scope and batch for `JennyJoshua/png-public-services-assistant`, after independent review and successful required checks. Do not ask the owner to approve each routine merge again. This is a project-specific authorization and does not automatically apply to other repositories.
+
+This authorization does not approve production deployments, production-impacting configuration changes, paid services, destructive actions, hosted database migrations or material scope/architecture changes. If merging a PR would trigger a production deployment, the separate production-deployment approval gate still applies; do not merge until that gate is satisfied or the deployment trigger is confirmed not to occur.
+
 ## 5. Render and hosting operating standard
 
 For projects using Render:
@@ -261,7 +267,7 @@ For projects using Render:
 | Routine implementation within approved scope | Delivery lead |
 | Run non-production tests that do not incur cost or affect real data | Delivery lead |
 | Create implementation branch and PR | Delivery lead |
-| Merge PR / change main | Explicit owner approval |
+| Routine in-scope PR merge / change main | ChatGPT under the standing PNG Public Services Assistant pilot authorization, after independent review and required checks; explicit owner approval remains necessary if the merge triggers production deployment or crosses another protected gate |
 | Production deployment or production configuration change | Explicit owner approval |
 | Hosted/production Supabase migration | Explicit owner approval |
 | Destructive data, repository or infrastructure action | Explicit owner approval |
@@ -295,7 +301,7 @@ Use trends to identify bottlenecks. Do not reward raw PR count or code volume; a
 
 ## 10. Pilot rollout plan — PNG Public Services Assistant
 
-This pilot changes the delivery process only. The approved Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0 and its seven-batch implementation backlog remain the controlling product/technical baseline.
+This pilot changes the delivery process only. The approved Simplified Hybrid RAG Architecture and Delivery Plan v1.1 and its reconciled seven-batch backlog are the controlling product/technical baseline.
 
 **Owner decision (16 November 2026):** Pilot first; apply the complete delivery-system scope across GitHub, Supabase and Render. Do not roll out portfolio-wide until the pilot exit criteria are evaluated.
 
