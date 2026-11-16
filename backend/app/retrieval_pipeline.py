@@ -79,7 +79,7 @@ def build_evidence_records(
             document_url=document.canonical_url,
             document_content_hash=document.content_hash,
             passage_index=int(passage["passage_index"]),
-            section_path=(),
+            section_path=tuple(passage.get("section_path", ())),
             text=str(passage["text"]),
             retrieved_at=document.retrieved_at,
             publication_date=document.publication_date,
