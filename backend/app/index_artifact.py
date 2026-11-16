@@ -1,4 +1,4 @@
-"""Validation and read-only loading for packaged, versioned RAG index artifacts.
+""""Validation and read-only loading for packaged, versioned RAG index artifacts.
 
 This module is deliberately not wired into the live retrieval path yet. It is a
 small Batch 0 prototype for validating the deployment-artifact contract.
@@ -61,27 +61,56 @@ def _validate_record(raw: Any, position: int) -> IndexRecord:
     }
     if set(raw) != required:
         raise IndexArtifactError(f"record {position} has missing or unexpected fields")
-    for field in ("source_id", "document_id", "passage_id", "institution", "title", "text", "content_hash"):
+    for field in (
+        "source_id", "document_id", "passage_id", "institution", "title",
+        "text", "content_hash",
+    ):
         if not isinstance(raw[field], str) or not raw[field].strip():
-            raise IndexArtifactError(f"record {position}.{field} must be a non-empty string")
+            raise IndexArtifactError(
+                f"record {position}.{field} must be a non-empty string"
+            )
     parsed_url = urlparse(raw["source_url"])
-    if parsed_url.scheme != "https" or not parsed_url.hostname or parsed_url.username or parsed_url.password:
-        raise IndexArtifactError(f"record {position}.source_url must be an HTTPS URL")
+    if (
+        parsed_url.scheme != "https"
+        or not parsed_url.hostname
+        or parsed_url.username
+        or parsed_url.password
+    ):
+        raise IndexArtifactError(
+            f"record {position}.source_url must be an HTTPS URL"
+        )
     section_path = raw["section_path"]
-    if not isinstance(section_path, list) or any(not isinstance(item, str) or not item.strip() for item in section_path):
-        raise IndexArtifactError(f"record {position}.section_path must be a list of non-empty strings")
+    if not isinstance(section_path, list) or any(
+        not isinstance(item, str) or not item.strip() for item in section_path
+    ):
+        raise IndexArtifactError(
+            f"record {position}.section_path must be a list of non-empty strings"
+        )
     record_position = raw["position"]
-    if isinstance(record_position, bool) or not isinstance(record_position, int) or record_position < 0:
-        raise IndexArtifactError(f"record {position}.position must be a non-negative integer")
+    if (
+        isinstance(record_position, bool)
+        or not isinstance(record_position, int)
+        or record_position < 0
+    ):
+        raise IndexArtifactError(
+            f"record {position}.position must be a non-negative integer"
+        )
     expected_hash = _sha256(raw["text"].encode("utf-8"))
     if raw["content_hash"] != expected_hash:
-        raise IndexArtifactError(f"record {position}.content_hash does not match text")
+        raise IndexArtifactError(
+            f"record {position}.content_hash does not match text"
+        )
     return IndexRecord(
-        source_id=raw["source_id"], document_id=raw["document_id"],
-        passage_id=raw["passage_id"], source_url=raw["source_url"],
-        institution=raw["institution"], title=raw["title"],
-        section_path=tuple(section_path), position=record_position,
-        text=raw["text"], content_hash=raw["content_hash"],
+        source_id=raw["source_id"],
+        document_id=raw["document_id"],
+        passage_id=raw["passage_id"],
+        source_url=raw["source_url"],
+        institution=raw["institution"],
+        title=raw["title"],
+        section_path=tuple(section_path),
+        position=record_position,
+        text=raw["text"],
+        content_hash=raw["content_hash"],
     )
 
 
@@ -105,7 +134,7 @@ def build_index_artifact(
         "records_sha256": _sha256(canonical_records),
         "records": records,
     }
-    return _canonical_json(envelope) + b"\n"
+    return _canonical_json(envelope) + b"\\n"
 
 
 def load_index_artifact(path: str | Path) -> IndexArtifact:
@@ -115,7 +144,9 @@ def load_index_artifact(path: str | Path) -> IndexArtifact:
         raw_bytes = artifact_path.read_bytes()
         payload = json.loads(raw_bytes.decode("utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise IndexArtifactError(f"could not read valid index artifact: {exc}") from exc
+        raise IndexArtifactError(
+            f"could not read valid index artifact: {exc}"
+        ) from exc
     if not isinstance(payload, dict):
         raise IndexArtifactError("artifact root must be an object")
     expected_fields = {
@@ -124,20 +155,32 @@ def load_index_artifact(path: str | Path) -> IndexArtifact:
     }
     if set(payload) != expected_fields:
         raise IndexArtifactError("artifact has missing or unexpected fields")
-    if payload["schema_version"] != SCHEMA_VERSION:
-        raise IndexArtifactError(f"unsupported schema_version: {payload['schema_version']!r}")
+    schema_version = payload["schema_version"]
+    if (
+        isinstance(schema_version, bool)
+        or not isinstance(schema_version, int)
+        or schema_version != SCHEMA_VERSION
+    ):
+        raise IndexArtifactError(
+            f"unsupported schema_version: {schema_version!r}"
+        )
     if not isinstance(payload["index_version"], str) or not payload["index_version"].strip():
         raise IndexArtifactError("index_version must be a non-empty string")
     if not isinstance(payload["generated_at"], str) or not payload["generated_at"].strip():
         raise IndexArtifactError("generated_at must be a non-empty string")
     if not isinstance(payload["records"], list):
         raise IndexArtifactError("records must be a list")
-    if isinstance(payload["record_count"], bool) or payload["record_count"] != len(payload["records"]):
+    record_count = payload["record_count"]
+    if isinstance(record_count, bool) or not isinstance(record_count, int) or record_count < 0:
+        raise IndexArtifactError("record_count must be a non-negative integer")
+    if record_count != len(payload["records"]):
         raise IndexArtifactError("record_count does not match records")
     records_bytes = _canonical_json(payload["records"])
     if payload["records_sha256"] != _sha256(records_bytes):
         raise IndexArtifactError("records_sha256 does not match records")
-    records = tuple(_validate_record(item, i) for i, item in enumerate(payload["records"]))
+    records = tuple(
+        _validate_record(item, i) for i, item in enumerate(payload["records"])
+    )
     if len({item.passage_id for item in records}) != len(records):
         raise IndexArtifactError("passage_id values must be unique")
     return IndexArtifact(
