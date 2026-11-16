@@ -351,8 +351,9 @@ def test_page_structure_retains_heading_hierarchy_and_table_context():
     assert blocks[2]["section_path"] == ("Licensing", "Eligibility")
     assert blocks[3]["section_path"] == ("Licensing", "Eligibility")
     assert blocks[4]["section_path"] == ("Licensing", "Fees")
-    assert "Form: F-10" in blocks[4]["text"]
-    assert "Fee: K50" in blocks[4]["text"]
+    assert blocks[5]["section_path"] == ("Licensing", "Fees")
+    assert "Form: F-10" in blocks[5]["text"]
+    assert "Fee: K50" in blocks[5]["text"]
 
 
 def test_ranked_structured_passages_keep_section_path():
