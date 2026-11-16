@@ -325,3 +325,56 @@ def test_gov_hostname_does_not_create_an_authority_ranking_bonus() -> None:
     ]
     results = _rank_passages("What registration form must applicants submit?", pages)
     assert results[0]["source"]["institution"] == "Example source A"
+
+
+
+def test_page_structure_retains_heading_hierarchy_and_table_context():
+    from app.rag import _page_structure
+
+    html = """
+    <html><head><title>Licensing</title></head><body><main>
+      <h1>Licensing</h1>
+      <p>General licence information for applicants.</p>
+      <h2>Eligibility</h2>
+      <ul><li>Applicants must be registered in Papua New Guinea.</li></ul>
+      <h2>Fees</h2>
+      <table>
+        <tr><th>Form</th><th>Fee</th></tr>
+        <tr><td>F-10</td><td>K50</td></tr>
+      </table>
+    </main></body></html>
+    """
+    blocks, title = _page_structure(html)
+    assert title == "Licensing"
+    assert blocks[0] == {"text": "Licensing", "section_path": ("Licensing",)}
+    assert blocks[1]["section_path"] == ("Licensing",)
+    assert blocks[2]["section_path"] == ("Licensing", "Eligibility")
+    assert blocks[3]["section_path"] == ("Licensing", "Eligibility")
+    assert blocks[4]["section_path"] == ("Licensing", "Fees")
+    assert "Form: F-10" in blocks[4]["text"]
+    assert "Fee: K50" in blocks[4]["text"]
+
+
+def test_ranked_structured_passages_keep_section_path():
+    from app.rag import _rank_passages
+
+    page = {
+        "institution": "Example Agency",
+        "title": "Licensing",
+        "url": "https://example.gov.pg/licensing",
+        "publication_date": None,
+        "last_checked_at": "2026-11-16T07:00:00+00:00",
+        "text": "Licensing\\nEligibility\\nApplicants must be registered.",
+        "blocks": [
+            {"text": "Licensing", "section_path": ("Licensing",)},
+            {"text": "Eligibility", "section_path": ("Licensing", "Eligibility")},
+            {"text": "Applicants must be registered.", "section_path": ("Licensing", "Eligibility")},
+        ],
+    }
+    results = _rank_passages("What are licensing eligibility requirements?", [page])
+    assert results
+    assert any(
+        item["section_path"] == ("Licensing", "Eligibility")
+        and "Applicants must be registered" in item["text"]
+        for item in results
+    )
