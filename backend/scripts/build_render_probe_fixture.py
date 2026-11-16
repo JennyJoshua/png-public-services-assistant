@@ -36,7 +36,7 @@ def build_fixture() -> bytes:
         source = approved[source_url]
         text = (
             f"SYNTHETIC TEST DATA ONLY. Render index delivery probe passage {index + 1}. "
-            + ("x" * 430)
+            + ("x" * 100)
         )
         records.append({
             "source_id": source_id_for_url(source_url),
@@ -55,7 +55,9 @@ def build_fixture() -> bytes:
         records, index_version=INDEX_VERSION, generated_at=GENERATED_AT
     )
     if len(payload) > TARGET_BYTES:
-        raise RuntimeError("Base fixture exceeds the target artifact size")
+        raise RuntimeError(
+            f"Base fixture exceeds target: {len(payload)} > {TARGET_BYTES} bytes"
+        )
     padding = TARGET_BYTES - len(payload)
     if padding:
         records[0]["text"] += "x" * padding
