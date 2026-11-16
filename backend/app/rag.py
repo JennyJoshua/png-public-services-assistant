@@ -68,7 +68,7 @@ def _page_structure(html: str) -> tuple[list[dict], str | None]:
         if element.name == "p" and element.find_parent("li"):
             continue
         if element.name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-            value = re.sub(r"\\s+", " ", element.get_text(" ", strip=True)).strip()
+            value = re.sub(r"\s+", " ", element.get_text(" ", strip=True)).strip()
             level = int(element.name[1])
             headings[level - 1] = value or None
             for index in range(level, 6):
@@ -83,22 +83,22 @@ def _page_structure(html: str) -> tuple[list[dict], str | None]:
                 table = element.find_parent("table")
                 header_row = table.find("tr") if table else None
                 headers = (
-                    [re.sub(r"\\s+", " ", cell.get_text(" ", strip=True)).strip()
+                    [re.sub(r"\s+", " ", cell.get_text(" ", strip=True)).strip()
                      for cell in header_row.find_all(["th", "td"], recursive=False)]
                     if header_row else []
                 )
-                values = [re.sub(r"\\s+", " ", cell.get_text(" ", strip=True)).strip() for cell in cells]
+                values = [re.sub(r"\s+", " ", cell.get_text(" ", strip=True)).strip() for cell in cells]
                 value = " | ".join(
                     f"{header}: {cell}" for header, cell in zip(headers, values)
                 ) if headers and len(headers) == len(values) else " | ".join(values)
             else:
-                value = re.sub(r"\\s+", " ", element.get_text(" ", strip=True)).strip()
+                value = re.sub(r"\s+", " ", element.get_text(" ", strip=True)).strip()
 
         if value and (not blocks or value != blocks[-1]["text"]):
             blocks.append({"text": value, "section_path": section_path})
 
     if not blocks:
-        value = re.sub(r"\\s+", " ", main.get_text(" ", strip=True)).strip()
+        value = re.sub(r"\s+", " ", main.get_text(" ", strip=True)).strip()
         if value:
             blocks.append({"text": value, "section_path": ()})
 
@@ -118,14 +118,14 @@ def _page_structure(html: str) -> tuple[list[dict], str | None]:
 def _page_text(html: str) -> tuple[str, str | None]:
     """Compatibility wrapper returning the historic newline-delimited text."""
     blocks, title = _page_structure(html)
-    return "\\n".join(block["text"] for block in blocks), title
+    return "\n".join(block["text"] for block in blocks), title
 
 
 def _split_passage_block(block: str) -> list[str]:
     """Split exceptionally long blocks while retaining sentence boundaries."""
     if len(block) <= MAX_PASSAGE_CHARS:
         return [block]
-    sentences = re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9])", block)
+    sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", block)
     passages: list[str] = []
     current = ""
     for sentence in sentences:
@@ -181,7 +181,7 @@ async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
             return None
         html = response.text
         content_blocks, page_title = _page_structure(html)
-        text = "\\n".join(block["text"] for block in content_blocks)
+        text = "\n".join(block["text"] for block in content_blocks)
         if len(text) < 80:
             return None
         return {
