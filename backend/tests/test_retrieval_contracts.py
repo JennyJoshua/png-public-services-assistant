@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 
 import pytest
@@ -10,6 +11,7 @@ from app.retrieval_contracts import (
     SourceClass,
     SourceRecord,
     SourceStatus,
+    SearchProvider,
 )
 
 NOW = datetime(2026, 11, 16, 7, 0, tzinfo=timezone.utc)
@@ -161,3 +163,38 @@ def test_evidence_passage_rejects_invalid_hash_and_empty_text():
         EvidencePassage(source, "document-id", SOURCE_URL, "not-a-hash", 0, (), TEXT, NOW)
     with pytest.raises(RetrievalContractError):
         EvidencePassage(source, "document-id", SOURCE_URL, "a" * 64, 0, (), " ", NOW)
+
+
+
+def test_search_provider_protocol_accepts_deterministic_fake_without_network():
+    class DeterministicSearchProvider:
+        name = "deterministic-test-provider"
+
+        def __init__(self, results):
+            self.results = results
+            self.queries = []
+
+        async def search(self, query: str, *, limit: int = 10):
+            self.queries.append(query)
+            return self.results[:limit]
+
+    expected = [
+        SearchResult(
+            title=f"PNG public service result {rank}",
+            url=f"https://example.gov.pg/services/{rank}",
+            snippet="Deterministic test evidence",
+            provider="deterministic-test-provider",
+            rank=rank,
+            retrieved_at=NOW,
+        )
+        for rank in range(1, 4)
+    ]
+    provider: SearchProvider = DeterministicSearchProvider(expected)
+
+    first = asyncio.run(provider.search("Gulf Province public services", limit=2))
+    second = asyncio.run(provider.search("Gulf Province public services", limit=2))
+
+    assert first == second
+    assert [item.rank for item in first] == [1, 2]
+    assert [item.provider for item in first] == ["deterministic-test-provider"] * 2
+    assert provider.queries == ["Gulf Province public services"] * 2
