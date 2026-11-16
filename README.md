@@ -8,6 +8,7 @@ The project-owner-approved **Simplified Hybrid RAG Architecture and Delivery Pla
 
 - [Simplified Hybrid RAG Architecture and Delivery Plan v1.1](docs/architecture/SIMPLIFIED_HYBRID_RAG_ARCHITECTURE_V1.1.md)
 - [Simplified Hybrid RAG Implementation Backlog v1.1](docs/architecture/SIMPLIFIED_HYBRID_RAG_IMPLEMENTATION_BACKLOG_V1.1.md)
+- [Search Provider Feasibility Review — 16 November 2026](docs/architecture/SEARCH_PROVIDER_FEASIBILITY_REVIEW_2026-11-16.md)
 - [Historical Bounded Adaptive RAG Technical Architecture v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_TECHNICAL_SPEC.md)
 - [Historical v1.0 Architecture Decision and Delivery Roadmap](docs/architecture/BOUNDED_ADAPTIVE_RAG_DECISION.md)
 - [Historical v1.0 Implementation Backlog](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md)
