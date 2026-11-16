@@ -9,6 +9,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.model_provider import ModelProviderError, generate_answer, model_is_configured
+from app.retrieval_pipeline import build_evidence_records, page_to_fetched_document
 from app.source_registry import SOURCES
 
 MAX_PAGE_BYTES = 1_500_000
@@ -121,6 +122,8 @@ async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
             "institution": source.institution,
             "title": page_title or source.title,
             "url": source.url,
+            "final_url": str(response.url),
+            "content_type": response.headers.get("content-type", ""),
             "publication_date": _published_date(html),
             "last_checked_at": datetime.now(timezone.utc).isoformat(),
             "text": text,
@@ -266,6 +269,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
             selected.append({
                 "score": score,
                 "text": item["text"],
+                "passage_index": item["passage_index"],
                 "source": item["source"],
             })
             if len(selected) >= MAX_SNIPPETS:
@@ -282,24 +286,26 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
         pages = await asyncio.gather(*(_fetch_source(client, source) for source in SOURCES))
 
     available_pages = [page for page in pages if page]
+    fetched_documents = [page_to_fetched_document(page) for page in available_pages]
     passages = _rank_passages(question, available_pages)
+    evidence_records = build_evidence_records(fetched_documents, passages)
 
     citations: list[dict] = []
     citation_indexes: dict[str, int] = {}
     evidence: list[dict] = []
-    for passage in passages:
-        source = passage["source"]
-        url = source["url"]
+    for passage in evidence_records:
+        source = passage.source
+        url = source.url
         if url not in citation_indexes:
             citation_indexes[url] = len(citations) + 1
             citations.append({
-                "title": source["title"],
-                "institution": source["institution"],
+                "title": source.title,
+                "institution": source.institution,
                 "url": url,
-                "publication_date": source["publication_date"],
-                "last_checked_at": source["last_checked_at"],
+                "publication_date": source.publication_date,
+                "last_checked_at": source.last_fetched_at.isoformat() if source.last_fetched_at else None,
             })
-        evidence.append({"text": passage["text"], "citation_index": citation_indexes[url]})
+        evidence.append({"text": passage.text, "citation_index": citation_indexes[url]})
 
     warnings: list[str] = []
     try:
@@ -319,7 +325,7 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
             "warnings": warnings,
         }
 
-    if not passages:
+    if not evidence_records:
         fallback = (
             "I could not find a sufficiently relevant passage in the currently approved sources. "
             "I won't guess at official requirements. Please check the responsible agency's website "
