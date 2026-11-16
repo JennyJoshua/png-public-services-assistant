@@ -14,7 +14,7 @@ Implementation proposals and pull requests must be reconciled against these docu
 
 ## Engineering delivery standard
 
-The proposed [AI-Assisted Continuous Delivery Operating Procedure v1.0](docs/engineering/AI_ASSISTED_CONTINUOUS_DELIVERY.md) defines the delivery process being piloted for this repository. It governs workflow and quality practices only; it does not change the approved RAG architecture, backlog or project-owner approval gates.
+The owner-adopted [Joshua AI Software Delivery System (JASDS) v1.0](docs/engineering/AI_ASSISTED_CONTINUOUS_DELIVERY.md) defines the portfolio delivery standard currently being piloted in this repository. It governs workflow and quality practices only; it does not change the approved RAG architecture, backlog or project-owner approval gates.
 
 ## Product direction
 
