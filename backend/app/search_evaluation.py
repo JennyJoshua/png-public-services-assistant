@@ -36,13 +36,13 @@ def _validate_result(result: dict[str, Any], query_id: str) -> None:
     if not isinstance(relevance, int) or isinstance(relevance, bool) or relevance not in (0, 1, 2):
         raise ValueError(f"{query_id}: human relevance grade must be 0, 1 or 2.")
     source_class = result.get("source_class")
-    if source_class is not None and source_class not in VALID_SOURCE_CLASSES:
+    if source_class is not None and (
+        not isinstance(source_class, str) or source_class not in VALID_SOURCE_CLASSES
+    ):
         raise ValueError(f"{query_id}: source_class must be A, B, C, D or null.")
     fetch_status = result.get("fetch_status", "not_checked")
-    if fetch_status not in VALID_FETCH_STATUSES:
+    if not isinstance(fetch_status, str) or fetch_status not in VALID_FETCH_STATUSES:
         raise ValueError(f"{query_id}: unsupported fetch_status.")
-    if "fetch_status" not in result:
-        result["fetch_status"] = "not_checked"
 
 
 def _dcg(grades: list[int]) -> float:
@@ -86,12 +86,14 @@ def score_query(query: dict[str, Any]) -> dict[str, Any]:
 
     latency = query.get("latency_ms")
     if latency is not None and (
-        not isinstance(latency, (int, float)) or isinstance(latency, bool) or latency < 0
+        not isinstance(latency, (int, float)) or isinstance(latency, bool)
+        or not math.isfinite(latency) or latency < 0
     ):
         raise ValueError(f"{query_id}: latency_ms must be a non-negative number or null.")
     usage = query.get("usage_units")
     if usage is not None and (
-        not isinstance(usage, (int, float)) or isinstance(usage, bool) or usage < 0
+        not isinstance(usage, (int, float)) or isinstance(usage, bool)
+        or not math.isfinite(usage) or usage < 0
     ):
         raise ValueError(f"{query_id}: usage_units must be a non-negative number or null.")
 
@@ -120,6 +122,9 @@ def score_provider(dataset: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(queries, list) or not queries:
         raise ValueError("At least one query is required.")
 
+    query_ids = [query.get("query_id") for query in queries if isinstance(query, dict)]
+    if len(query_ids) != len(queries) or len(set(query_ids)) != len(query_ids):
+        raise ValueError("Query records must have unique query_id values.")
     scored = [score_query(query) for query in queries]
     metric_names = (
         "precision_at_5",
