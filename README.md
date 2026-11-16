@@ -14,7 +14,7 @@ Implementation proposals and pull requests must be reconciled against these docu
 
 ## Engineering delivery standard
 
-The proposed [AI-Assisted Continuous Delivery Operating Procedure v1.0](docs/engineering/AI_ASSISTED_CONTINUOUS_DELIVERY.md) defines the delivery process being piloted for this repository. It governs workflow and quality practices only; it does not change the approved RAG architecture, backlog or project-owner approval gates.
+The owner-adopted [Joshua AI Software Delivery System (JASDS) v1.0](docs/engineering/AI_ASSISTED_CONTINUOUS_DELIVERY.md) defines the portfolio delivery standard currently being piloted in this repository. It governs workflow and quality practices only; it does not change the approved RAG architecture, backlog or project-owner approval gates.
 
 ## Product direction
 
@@ -69,7 +69,7 @@ Passing CI or a successful artifact audit does not constitute release readiness 
 
 The existing hosting direction is Render, with the current free-service constraints respected. Free-service filesystem changes are ephemeral; the authoritative index must not depend on mutable runtime files or an assumed persistent disk. The approved architecture requires measured startup, memory, packaging, replacement, and rollback validation before relying on deployed index artifacts.
 
-The existing Groq arrangement remains the preferred model-provider direction within the approved free-service constraint. Secrets remain server-side. No paid plan or service is authorised by this README.
+**Approved pilot AI-provider constraint:** retain the existing free Groq-hosted LLM arrangement. Keep Groq credentials server-side, verify the configured model's availability and rate limits, and handle provider failures safely. Do not introduce a paid OpenAI API dependency, paid Groq tier, paid fallback provider, or other recurring AI cost without explicit owner approval. The exact configured model identifier must be confirmed from non-secret configuration before it is documented as fact. No paid plan or service is authorised by this README.
 
 ## Approval gates
 

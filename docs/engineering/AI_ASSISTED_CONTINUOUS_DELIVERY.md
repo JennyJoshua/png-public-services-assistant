@@ -1,11 +1,15 @@
-# AI-Assisted Continuous Delivery (AI-ACD)
-## Portfolio Operating Procedure v1.0 — Pilot
+# Joshua AI Software Delivery System (JASDS)
+## Version 1.0 — Portfolio Operating Procedure
 
-**Status:** Proposed operating standard for owner review  
+*Delivery model: AI-Assisted Continuous Delivery (AI-ACD)*
+
+**Status:** Adopted for the PNG Public Services Assistant pilot by the project owner on 16 November 2026; portfolio-wide rollout remains pending  
 **Pilot repository:** `JennyJoshua/png-public-services-assistant`  
 **Tracking issue:** #31  
 **Applies to:** Current and future software projects using GitHub, Supabase, Render, or comparable services  
 **Primary objective:** Deliver useful, reliable software in small verified increments while reducing rework, repeated handovers, avoidable failures and unnecessary owner interruptions.
+
+**Naming:** JASDS is the portfolio-wide operating standard. AI-ACD is the delivery method used within it. This document supersedes the earlier proposed AI-ACD-only title without creating a competing second procedure.
 
 This procedure governs how work is delivered. It does not override a project's approved product requirements, architecture, backlog, security rules, licensing obligations or approval gates.
 
@@ -61,7 +65,7 @@ This procedure governs how work is delivered. It does not override a project's a
 Before a new project or major phase:
 - Confirm product objective, target users, MVP boundary and business rules.
 - Identify approved architecture, constraints, licensing and data/security requirements.
-- Identify hosting, database and AI-provider dependencies.
+- Identify hosting, database and AI-provider dependencies. Record the approved provider, free/paid status, model identifier, secret-handling boundary, rate limits, availability risks and fallback behaviour. Do not substitute a paid provider or model without explicit owner approval.
 - Record decisions and unresolved questions in GitHub.
 - Establish a definition of done and the first measurable milestone.
 
@@ -230,6 +234,15 @@ For projects using Render:
 
 ## 6. Security and data handling
 
+### AI/LLM provider and cost constraints
+
+- Treat the project's approved AI provider and model choice as part of its technical baseline.
+- **PNG Public Services Assistant pilot:** retain the existing free Groq-hosted LLM arrangement. Prefer free models and services; do not introduce a paid OpenAI API dependency, paid Groq tier, paid fallback provider or other recurring AI cost without explicit owner approval.
+- Keep provider API keys server-side. Never expose keys in frontend bundles, source control, issues, logs or client responses.
+- Verify the configured model's current availability, rate limits, request limits, timeout behaviour and provider error handling before relying on it. Record the exact model identifier only after confirming it from non-secret configuration; never reveal credential values.
+- Define safe behaviour when the provider is unavailable or rate-limited (for example, a clear temporary-unavailable response or evidence-based abstention). Do not silently switch to an unapproved provider or model.
+- Do not claim a model, fallback or reliability guarantee is active unless the repository configuration and runtime evidence verify it.
+
 - Apply least privilege to GitHub tokens, CI permissions, Supabase roles and service credentials.
 - Never commit API keys, service-role keys, passwords, private learner/customer data or production database exports.
 - Use synthetic or anonymised fixtures in tests.
@@ -284,46 +297,51 @@ Use trends to identify bottlenecks. Do not reward raw PR count or code volume; a
 
 This pilot changes the delivery process only. The approved Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0 and its seven-batch implementation backlog remain the controlling product/technical baseline.
 
-### Pilot step 1 — Process baseline and records
-- Adopt this SOP after owner review.
-- Reconcile stale issue/PR status, beginning with Batch 0 issue #15 and the already merged PRs #29 and #30.
-- Add reusable issue and PR templates only after inspecting existing templates and avoiding duplication.
-- Record a baseline for task cycle time, CI first-pass success and rework using available evidence.
+**Owner decision (16 November 2026):** Pilot first; apply the complete delivery-system scope across GitHub, Supabase and Render. Do not roll out portfolio-wide until the pilot exit criteria are evaluated.
 
-### Pilot step 2 — CI reliability improvements
-- Review the existing `.github/workflows/ci.yml` against this SOP.
-- Evaluate switching from `npm install --ignore-scripts` to `npm ci` because a package lockfile exists.
-- Ensure npm caching keys use the lockfile.
-- Add safe concurrency cancellation and least-privilege permissions where appropriate.
-- Verify CI runs for PRs and the intended branch patterns.
-- Preserve backend and frontend checks; do not weaken or remove existing tests.
-- Deliver workflow changes as a separate PR with CI evidence. Do not merge automatically.
+### Pilot step 1 — Process baseline and records (completed)
+- The operating procedure was reviewed and merged through PR #32.
+- The pilot is tracked in GitHub Issue #31; project delivery work remains tracked in its existing RAG issues rather than duplicating that backlog.
+- Batch 0 status and evidence are maintained in Issue #15. Its technical work remains open where acceptance criteria are still outstanding.
+- The pilot baseline is based on live GitHub records and service configuration, not stale chat handovers.
 
-### Pilot step 3 — Review and security templates
-- Add a concise PR template and issue template if equivalent templates do not already exist.
-- Include acceptance criteria, test evidence, data/security impact, deployment and rollback fields.
-- Evaluate secret/dependency scanning available on the current GitHub plan; do not assume paid features are available.
+### Pilot step 2 — CI reliability improvements (completed)
+- PR #34 was merged after CI passed.
+- Frontend dependencies are installed deterministically with `npm ci --ignore-scripts`, using the committed lockfile and lockfile-based npm cache.
+- CI uses workflow/ref concurrency cancellation and least-privilege `contents: read` permissions.
+- Frontend typecheck, lint and production build remain in place; backend pytest remains in place.
+- CI run #76 passed for the PR and main-branch runs #77 and #79 passed after integration.
+- These changes improve CI reliability; they do not constitute branch protection or guarantee that a merge cannot trigger a production deployment.
 
-### Pilot step 4 — Database and hosting readiness standards
-- Document the repository-specific Supabase/Render status and exact safeguards only after inspecting the actual linked project configuration.
-- Do not create a Supabase project, run migrations, alter Render configuration, trigger a production deployment or purchase a service as part of this process pilot.
-- Keep the existing Batch 0 non-production hosting validation and RAG backlog in their existing tracking issues.
+### Pilot step 3 — Review and security templates (completed)
+- PR #36 was merged after CI passed.
+- Bug-report, feature-request and pull-request templates are present under `.github/`.
+- Templates require clear outcomes and evidence while keeping issue creation lightweight.
 
-### Pilot step 5 — Measure and decide
-- Run the SOP for at least three completed small delivery tasks or one full delivery batch, whichever provides sufficient evidence.
-- Compare cycle time, CI first-pass rate and rework with the baseline.
-- Record what reduced effort and what introduced overhead.
-- Revise the SOP before portfolio-wide rollout if evidence supports changes.
+### Pilot step 4 — Database and hosting readiness (inspected; guardrails active)
+- The connected Supabase account listing returned no project identified as PNG Public Services Assistant. No Supabase database, migration or production schema change is part of this pilot. Treat Supabase as not integrated for this repository unless a future project decision and fresh inspection establish otherwise.
+- The two Render application services are on the Free plan, linked to `main`, and configured for automatic deployment on each commit. Their returned configuration has no health-check path and has PR previews disabled.
+- The latest live deployment returned for both application services is still commit `75d88db873e5ba302d484dff31c8e864afba82c1` (13 November 2026), while the inspected `main` commit is `36742019b1bc5a4893dfcf6537b7290fb0a12136` (16 November 2026). This is a verified repository-to-production version mismatch. Although automatic deployment is configured, the deployment history does not show the latest `main` commit as live. Investigate the trigger/event history and verify the running version before relying on a future release; do not trigger a deployment as part of this pilot.
+- Because a merge to `main` can trigger Render deployment, a merge must be treated as production-impacting for these services. Obtain explicit owner approval before merging any change that would trigger a production deployment.
+- The separate `png-public-services-index-probe` service is a free non-production test service on its dedicated test branch, with auto-deploy disabled. It is not a production service.
+- No Supabase project, migration, Render production configuration, production deployment, paid resource or secret was changed during this process pilot.
+- Any future Render change to deploy only after CI, add health checks, or otherwise alter production service configuration must be proposed separately and receive explicit owner approval before application.
+
+### Pilot step 5 — Measure and decide (in progress)
+- Two completed small delivery tasks after SOP adoption are recorded: PR #34 (CI reliability) and PR #36 (issue/PR templates). Both passed their required CI runs.
+- A third completed small task or one complete delivery batch is still required before claiming a measured improvement.
+- Use the next eligible small delivery task to record issue cycle time, PR lead time, first-pass required-CI success, rework, and blocked time. Record actual timestamps and outcomes from GitHub; do not estimate missing values.
+- PRs #37 and #39 are currently open feature/validation work and must be reviewed independently. They are not counted as completed pilot tasks until their acceptance criteria, owner review, merge approval and any applicable runtime verification are complete.
+- Compare the observed workflow with the baseline and record both time saved and any process overhead. Do not set numerical performance targets until sufficient baseline evidence exists.
 
 ### Pilot exit criteria
-- A small task can be traced from Issue to PR, CI, review, merge approval and (where applicable) verified deployment.
-- No owner approval gate is bypassed.
+- At least three small tasks or one complete delivery batch have been completed using this procedure.
+- A task can be traced from Issue to PR, required CI, independent review, owner merge approval and (where applicable) verified deployment.
+- No owner approval gate has been bypassed.
 - CI and test evidence is reproducible.
 - Stale project status is reconciled.
 - The measured workflow is simpler or more reliable than the baseline.
 - A reusable starter/template backlog is ready for the remaining repositories.
-
----
 
 ## 11. Portfolio rollout after the pilot
 
@@ -335,4 +353,4 @@ After pilot acceptance:
 5. Prioritise active projects; do not launch a simultaneous portfolio-wide refactor.
 6. Review delivery metrics monthly and update the standard only when evidence justifies it.
 
-**Versioning:** This is v1.0 proposed for pilot. Changes to this operating standard are documented with a short rationale and owner approval where they affect decision rights or approval gates.
+**Versioning:** JASDS v1.0 is adopted for the PNG Public Services Assistant pilot. Portfolio-wide adoption remains conditional on pilot evaluation. Changes to this operating standard are documented with a short rationale and owner approval where they affect decision rights or approval gates.
