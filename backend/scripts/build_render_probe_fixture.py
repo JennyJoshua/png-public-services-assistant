@@ -34,10 +34,7 @@ def build_fixture() -> bytes:
     for index in range(RECORD_COUNT):
         source_url = SOURCE_URLS[index % len(SOURCE_URLS)]
         source = approved[source_url]
-        text = (
-            f"SYNTHETIC TEST DATA ONLY. Render index delivery probe passage {index + 1}. "
-            + ("x" * 100)
-        )
+        text = f"SYNTHETIC TEST DATA ONLY. Render index delivery probe passage {index + 1}."
         records.append({
             "source_id": source_id_for_url(source_url),
             "document_id": document_id_for_url(source_url),
