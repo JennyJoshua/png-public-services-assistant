@@ -115,3 +115,31 @@ def test_rejects_duplicate_ranks():
             "query": "PNG public services",
             "results": [result(1, 1), result(1, 2)],
         })
+
+
+
+@pytest.mark.parametrize("field,value", [
+    ("source_class", []),
+    ("fetch_status", {}),
+])
+def test_rejects_malformed_source_class_and_fetch_status(field, value):
+    item = result(1, 1)
+    item[field] = value
+    with pytest.raises(ValueError):
+        score_query({
+            "query_id": "Q01",
+            "query": "PNG public services",
+            "results": [item],
+        })
+
+
+def test_rejects_duplicate_query_ids_and_non_finite_measurements():
+    data = dataset([result(1, 1)])
+    data["queries"].append(dict(data["queries"][0]))
+    with pytest.raises(ValueError, match="unique query_id"):
+        score_provider(data)
+
+    data = dataset([result(1, 1)])
+    data["queries"][0]["latency_ms"] = float("nan")
+    with pytest.raises(ValueError, match="latency_ms"):
+        score_provider(data)
