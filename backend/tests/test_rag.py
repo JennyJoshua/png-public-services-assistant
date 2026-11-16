@@ -364,7 +364,7 @@ def test_ranked_structured_passages_keep_section_path():
         "url": "https://example.gov.pg/licensing",
         "publication_date": None,
         "last_checked_at": "2026-11-16T07:00:00+00:00",
-        "text": "Licensing\\nEligibility\\nApplicants must be registered.",
+        "text": "Licensing\nEligibility\nApplicants must be registered.",
         "blocks": [
             {"text": "Licensing", "section_path": ("Licensing",)},
             {"text": "Eligibility", "section_path": ("Licensing", "Eligibility")},
