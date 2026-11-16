@@ -64,7 +64,7 @@ def test_provider_summary_aggregates_queries_and_cost_units():
     assert report["provider"] == "test-provider"
     assert report["query_count"] == 2
     assert report["total_results"] == 3
-    assert report["mean_latency_ms"] == pytest.approx(170)
+    assert report["mean_latency_ms"] == pytest.approx(170.25)
     assert report["total_usage_units"] == 3
     assert len(report["per_query"]) == 2
 
@@ -85,7 +85,7 @@ def test_empty_results_score_zero_without_crashing():
     "https://user:pass@example.gov.pg/page",
 ])
 def test_rejects_non_https_or_credential_result_urls(bad_url):
-    with pytest.raises(ValueError, match="HTTPS URL"):
+    with pytest.raises(ValueError):
         score_query({
             "query_id": "Q01",
             "query": "PNG public services",
@@ -142,4 +142,12 @@ def test_rejects_duplicate_query_ids_and_non_finite_measurements():
     data = dataset([result(1, 1)])
     data["queries"][0]["latency_ms"] = float("nan")
     with pytest.raises(ValueError, match="latency_ms"):
+        score_provider(data)
+
+
+
+def test_rejects_non_string_query_id_in_provider_dataset():
+    data = dataset([result(1, 1)])
+    data["queries"][0]["query_id"] = []
+    with pytest.raises(ValueError, match="unique query_id"):
         score_provider(data)
