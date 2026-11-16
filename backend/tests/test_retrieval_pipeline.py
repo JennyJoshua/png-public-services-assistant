@@ -80,3 +80,11 @@ def test_ranked_passage_without_matching_document_fails_closed():
             "text": "Unregistered content",
             "passage_index": 0,
         }])
+
+
+
+def test_page_adapter_rejects_redirect_to_another_host():
+    from app.retrieval_contracts import RetrievalContractError
+
+    with pytest.raises(RetrievalContractError, match="registered source host"):
+        page_to_fetched_document(page(final_url="https://unrelated.example/collect"))
