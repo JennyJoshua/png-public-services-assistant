@@ -75,14 +75,15 @@ The existing hosting direction is Render, with the current free-service constrai
 
 ## Approval gates
 
+Routine in-scope implementation PRs are covered by the owner's standing authorization for ChatGPT to independently review, verify required checks and merge without requesting approval for each PR. This standing authorization does not cover production deployments or changes that would trigger a production deployment; that remains a separate approval gate.
+
 Explicit project-owner approval is required before:
-- Merging implementation pull requests.
 - Production deployments or production behaviour/configuration changes.
 - Paid services or upgrades.
 - Destructive actions or database migrations.
 - Material scope or architecture changes.
 
-Technical investigation, documentation, and implementation may proceed within the approved baseline and existing permissions, but every implementation PR must be reviewed before merge.
+Technical investigation, documentation, and implementation may proceed within the approved baseline and existing permissions, and every implementation PR must be independently reviewed and pass its required checks before merge.
 
 ## Document generation
 
