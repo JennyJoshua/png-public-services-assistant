@@ -4,13 +4,15 @@ A mobile-first assistant designed to help people in Papua New Guinea find trustw
 
 ## Controlling technical baseline
 
-The project-owner-approved **Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0** is the controlling technical baseline for implementation.
+The project-owner-approved **Simplified Hybrid RAG Architecture and Delivery Plan v1.1** is the active technical baseline, merged through PR #41 (merge commit `eb363795fc74822913c11c8227041fb95919329a`). It supersedes v1.0 for future work. The original v1.0 documents remain available as historical design records.
 
-- [Technical Architecture and Interface Specification v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_TECHNICAL_SPEC.md)
-- [Bounded Adaptive RAG Architecture Decision and Delivery Roadmap](docs/architecture/BOUNDED_ADAPTIVE_RAG_DECISION.md)
-- [Bounded Adaptive RAG Implementation Backlog v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md)
+- [Simplified Hybrid RAG Architecture and Delivery Plan v1.1](docs/architecture/SIMPLIFIED_HYBRID_RAG_ARCHITECTURE_V1.1.md)
+- [Simplified Hybrid RAG Implementation Backlog v1.1](docs/architecture/SIMPLIFIED_HYBRID_RAG_IMPLEMENTATION_BACKLOG_V1.1.md)
+- [Historical Bounded Adaptive RAG Technical Architecture v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_TECHNICAL_SPEC.md)
+- [Historical v1.0 Architecture Decision and Delivery Roadmap](docs/architecture/BOUNDED_ADAPTIVE_RAG_DECISION.md)
+- [Historical v1.0 Implementation Backlog](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md)
 
-Implementation proposals and pull requests must be reconciled against these documents. Proposed implementation choices do not override the approved baseline unless the project owner explicitly approves a material change.
+The seven existing GitHub batch issues remain the delivery tracker. Their active scope and acceptance criteria are being reconciled to v1.1 without creating duplicate issues.
 
 ## Engineering delivery standard
 
@@ -33,14 +35,14 @@ The application provides a conversational interface for:
 - Clear distinction between verified facts, general guidance, and unknown information.
 - Privacy and security by design; private uploads are not public knowledge sources.
 - Users review and approve generated documents. The assistant does not submit forms, sign, certify, or make declarations on a user's behalf.
-- Approved exact-URL sources only; no unrestricted crawling or arbitrary user-supplied source URLs.
+- Prioritise approved authoritative sources; permit bounded general-web discovery only when approved evidence is insufficient, with source classes and explicit uncertainty. No unrestricted crawling or arbitrary user-supplied source URLs.
 - No model training or fine-tuning, and no persistent conversation history.
 - Do not assume Render's local filesystem is durable.
 - Do not claim retrieval or answer-quality improvements without evaluation evidence.
 
 ## Current implementation
 
-The repository contains a Next.js/TypeScript frontend and a Python/FastAPI backend. The current live retrieval implementation still follows the earlier page-fetch-and-rank path; it has **not yet been connected to the versioned index artifact** required by the approved architecture.
+The repository contains a Next.js/TypeScript frontend and a Python/FastAPI backend. The current live retrieval implementation fetches the fixed approved URL registry, extracts pages and ranks passages with BM25 before sending bounded evidence to the configured Groq model. General internet search, source classification, evidence sufficiency and claim-level citation verification are not yet implemented.
 
 The approved-source ingestion and versioned-index foundations have been added:
 - General lexical retrieval, vocabulary aliases, context expansion, and improved preservation of headings, lists, and table labels.
@@ -52,7 +54,7 @@ The latest controlled audit indexed 4 of 15 registered pages and produced 163 pa
 
 ## Delivery status
 
-Implementation is governed by the seven batches in the approved [Implementation Backlog v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md). Its detailed work items and acceptance criteria are authoritative.
+Implementation is governed by the seven existing GitHub batch issues, reconciled to the approved [Simplified Hybrid RAG Backlog v1.1](docs/architecture/SIMPLIFIED_HYBRID_RAG_IMPLEMENTATION_BACKLOG_V1.1.md).
 
 Recent merged implementation PRs:
 - PR #23 — general-purpose retrieval foundation.
@@ -61,13 +63,13 @@ Recent merged implementation PRs:
 - PR #26 — controlled ephemeral source-index audit workflow.
 - PR #27 — source-index audit CLI import-path correction.
 
-Important outstanding work includes completing Render artifact-delivery validation, establishing the reviewed retrieval evaluation set, enriching governed source metadata, integrating the versioned index into online retrieval, implementing source-change monitoring, and completing Batches 3–6.
+Important outstanding work includes evaluating compliant free search providers for PNG/Pacific relevance, building a provider-neutral evidence interface, adding bounded general-web discovery, source classification, evidence sufficiency and citation verification, then completing security, reliability and evaluation. Full production index delivery is optional and must be justified by measured value.
 
 Passing CI or a successful artifact audit does not constitute release readiness or deployment approval.
 
 ## Hosting and provider constraints
 
-The existing hosting direction is Render, with the current free-service constraints respected. Free-service filesystem changes are ephemeral; the authoritative index must not depend on mutable runtime files or an assumed persistent disk. The approved architecture requires measured startup, memory, packaging, replacement, and rollback validation before relying on deployed index artifacts.
+The existing hosting direction is Render, with the current free-service constraints respected. GitHub is the only permanent application knowledge/artifact store initially. Render Free filesystem changes are ephemeral; runtime behaviour must not depend on mutable files surviving restart, redeploy or spin-down. Optional read-only index artifacts may be packaged with deployments only where justified and validated.
 
 **Approved pilot AI-provider constraint:** retain the existing free Groq-hosted LLM arrangement. Keep Groq credentials server-side, verify the configured model's availability and rate limits, and handle provider failures safely. Do not introduce a paid OpenAI API dependency, paid Groq tier, paid fallback provider, or other recurring AI cost without explicit owner approval. The exact configured model identifier must be confirmed from non-secret configuration before it is documented as fact. No paid plan or service is authorised by this README.
 
