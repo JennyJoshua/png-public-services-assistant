@@ -123,7 +123,11 @@ def score_provider(dataset: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("At least one query is required.")
 
     query_ids = [query.get("query_id") for query in queries if isinstance(query, dict)]
-    if len(query_ids) != len(queries) or len(set(query_ids)) != len(query_ids):
+    if (
+        len(query_ids) != len(queries)
+        or any(not isinstance(query_id, str) or not query_id.strip() for query_id in query_ids)
+        or len(set(query_ids)) != len(query_ids)
+    ):
         raise ValueError("Query records must have unique query_id values.")
     scored = [score_query(query) for query in queries]
     metric_names = (
