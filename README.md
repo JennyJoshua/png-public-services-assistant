@@ -12,6 +12,7 @@ The project-owner-approved **Simplified Hybrid RAG Architecture and Delivery Pla
 - [Historical Bounded Adaptive RAG Implementation Backlog v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md)
 - [Source Policy](docs/architecture/RAG_SOURCE_POLICY.md)
 - [Hybrid Model Policy](docs/architecture/HYBRID_MODEL_POLICY.md)
+- [Search Provider Feasibility Review — 17 November 2026](docs/research/SEARCH_PROVIDER_FEASIBILITY_2026-11-17.md)
 
 New implementation proposals must follow v1.1, the source policy, and the active GitHub batch issues. Historical v1.0 work remains useful where compatible and is not to be deleted merely because the architecture evolved.
 
