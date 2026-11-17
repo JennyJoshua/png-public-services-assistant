@@ -48,7 +48,8 @@ def page_to_fetched_document(page: dict) -> FetchedDocument:
     final_url = str(page.get("final_url") or source_url)
     source_host = (urlsplit(source_url).hostname or "").lower()
     final_host = (urlsplit(final_url).hostname or "").lower()
-    if (not source_host or not final_host or urlsplit(final_url).scheme != "https"\n            or (final_host != source_host and not final_host.endswith(".gov.pg"))):
+    if (not source_host or not final_host or urlsplit(final_url).scheme != "https"
+            or (final_host != source_host and not final_host.endswith(".gov.pg"))):
         raise RetrievalContractError(
             "Fetched page must remain on its registered source host."
         )
