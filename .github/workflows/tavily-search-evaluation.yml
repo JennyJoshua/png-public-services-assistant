@@ -1,0 +1,47 @@
+name: Tavily PNG Pacific Search Evaluation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tavily-png-pacific-evaluation
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    name: Run synthetic search evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend requirements
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Run fixed synthetic query suite
+        env:
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: |
+          if [ -z "$TAVILY_API_KEY" ]; then
+            echo "::error::Add TAVILY_API_KEY as a repository Actions secret before running this manual workflow."
+            exit 1
+          fi
+          PYTHONPATH=backend python backend/scripts/run_tavily_search_evaluation.py
+
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tavily-png-pacific-search-evaluation
+          path: artifacts/tavily-search-evaluation.json
+          if-no-files-found: ignore
+          retention-days: 7
