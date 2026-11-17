@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import httpx
 import pytest
@@ -106,7 +107,8 @@ def test_missing_key_and_empty_query_list_fail_closed():
 
 
 def test_query_fixture_has_ten_synthetic_queries():
-    fixture = load_query_fixture("backend/evaluation/tavily_png_pacific_queries.json")
+    fixture_path = Path(__file__).resolve().parents[1] / "evaluation" / "tavily_png_pacific_queries.json"
+    fixture = load_query_fixture(str(fixture_path))
     assert len(fixture) == 10
     assert {item["id"] for item in fixture} == {f"Q{i:02d}" for i in range(1, 11)}
     assert all("Papua New Guinea" in item["query"] or item["country"] != "papua new guinea" for item in fixture)
