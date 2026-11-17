@@ -169,8 +169,12 @@ class EvidencePassage:
         object.__setattr__(
             self, "document_url", _require_https_url(self.document_url, "Evidence document URL")
         )
+        if self.document_url != self.source.url:
+            raise RetrievalContractError("Evidence document URL must match its source URL.")
         if not self.document_id.strip():
             raise RetrievalContractError("Evidence document ID must not be empty.")
+        if self.retrieved_at.tzinfo is None:
+            raise RetrievalContractError("Evidence retrieval timestamp must include a timezone.")
         if not re.fullmatch(r"[0-9a-f]{64}", self.document_content_hash):
             raise RetrievalContractError("Evidence document content hash must be a SHA-256 hex digest.")
         if self.passage_index < 0:
