@@ -361,7 +361,7 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
         )
     else:
         answer_lines = [
-            "I found these relevant passages in the approved PNG public-service sources:"
+            "I found these relevant passages in the configured PNG public-service source registry:"
         ]
         for item in evidence:
             answer_lines.append(f"- {item['text']} [{item['citation_index']}]")
