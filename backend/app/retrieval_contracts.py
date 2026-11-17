@@ -133,6 +133,14 @@ class FetchedDocument:
             self, "canonical_url", _require_https_url(self.canonical_url, "Canonical URL")
         )
         object.__setattr__(self, "final_url", _require_https_url(self.final_url, "Final URL"))
+        canonical = urlsplit(self.canonical_url)
+        final = urlsplit(self.final_url)
+        if self.canonical_url != self.source.url:
+            raise RetrievalContractError("Canonical URL must match the registered source URL.")
+        if (canonical.hostname or "").lower() != (final.hostname or "").lower():
+            raise RetrievalContractError("Final URL must remain on the canonical source host.")
+        if self.retrieved_at.tzinfo is None:
+            raise RetrievalContractError("Document retrieval timestamp must include a timezone.")
         if not self.title.strip():
             raise RetrievalContractError("Fetched-document title must not be empty.")
         if not self.content_type.strip():
