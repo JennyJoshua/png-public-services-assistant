@@ -117,3 +117,56 @@ def test_fetch_one_stops_when_download_exceeds_configured_byte_limit(monkeypatch
     assert status["fetch_succeeded"] is True
     assert status["usable_text"] is False
     assert "100 byte source limit" in status["error"]
+
+
+def test_refresh_failure_preserves_last_good_in_memory_copy(monkeypatch):
+    from app import source_content
+
+    source = SOURCES[0]
+    old_page = {
+        "institution": source.institution,
+        "agency": source.institution,
+        "title": "Previously fetched page",
+        "topic": source.title,
+        "url": source.url,
+        "final_url": source.url,
+        "content_type": "text/html",
+        "publication_date": None,
+        "last_checked_at": "2026-11-16T00:00:00+00:00",
+        "text": "Previously fetched official service text that remains usable.",
+    }
+    monkeypatch.setattr(source_content, "SOURCES", (source,))
+    monkeypatch.setattr(source_content, "_LAST_REFRESH", None)
+    monkeypatch.setitem(source_content._CACHE, source.url, old_page)
+    monkeypatch.setitem(source_content._STATUS, source.url, {
+        "url": source.url,
+        "agency": source.institution,
+        "topic": source.title,
+        "last_attempt_at": None,
+        "last_success_at": old_page["last_checked_at"],
+        "http_status": 200,
+        "final_url": source.url,
+        "fetch_succeeded": True,
+        "usable_text": True,
+        "text_chars": len(old_page["text"]),
+        "cached": True,
+        "error": None,
+    })
+    original_client = httpx.AsyncClient
+
+    def failing_client(*args, **kwargs):
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(503, request=request)
+        kwargs["transport"] = httpx.MockTransport(handler)
+        return original_client(*args, **kwargs)
+
+    monkeypatch.setattr(source_content.httpx, "AsyncClient", failing_client)
+    result = asyncio.run(source_content.refresh_sources())
+    status = source_content.get_sources_status()["sources"][0]
+
+    assert result["successful"] == 0
+    assert source_content._CACHE[source.url]["text"] == old_page["text"]
+    assert status["cached"] is True
+    assert status["fetch_succeeded"] is False
+    assert status["last_success_at"] == old_page["last_checked_at"]
+    assert status["error"] == "HTTP 503"
