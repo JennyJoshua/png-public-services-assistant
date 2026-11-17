@@ -72,6 +72,7 @@ def test_fetch_one_returns_clean_html_and_status():
     assert page["institution"] == source.institution
     assert page["url"] == source.url
     assert "passport application information" in page["text"].lower()
+    assert status["fetch_succeeded"] is True
     assert status["usable_text"] is True
     assert status["text_chars"] > 40
 
@@ -88,5 +89,6 @@ def test_fetch_one_reports_no_text_without_throwing():
 
     page, status = asyncio.run(run())
     assert page is None
+    assert status["fetch_succeeded"] is True
     assert status["usable_text"] is False
     assert "usable text" in status["error"]
