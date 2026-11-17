@@ -79,7 +79,16 @@ def _extract_html(raw: bytes) -> tuple[str, str]:
             break
     if not blocks:
         blocks = [main.get_text(" ", strip=True)]
-    return _clean_text("\n".join(blocks)), title
+    text = _clean_text("\n".join(blocks))
+    normalized = text.lower()
+    javascript_shell_markers = (
+        "you need to enable javascript to run this app",
+        "javascript is required to view this page",
+        "please enable javascript to continue",
+    )
+    if len(text) < 200 and any(marker in normalized for marker in javascript_shell_markers):
+        return "", title
+    return text, title
 
 
 def _extract_pdf(raw: bytes) -> tuple[str, str]:
