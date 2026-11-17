@@ -1,3 +1,9 @@
+# Historical Backlog — Bounded Adaptive RAG v1.0
+
+**Status:** Superseded for future implementation by [Simplified Hybrid RAG Implementation Backlog v1.1](SIMPLIFIED_HYBRID_RAG_IMPLEMENTATION_BACKLOG_V1.1.md), active following PR #41.  
+**Purpose:** Retained unchanged as a historical record of the previously approved v1.0 plan. The existing GitHub issues have been reconciled to v1.1; do not use this historical file to scope new work.
+
+
 # Implementation Backlog — Bounded Adaptive RAG v1.0
 
 **Baseline:** Approved [Technical Architecture and Interface Specification v1.0](../architecture/BOUNDED_ADAPTIVE_RAG_TECHNICAL_SPEC.md)  

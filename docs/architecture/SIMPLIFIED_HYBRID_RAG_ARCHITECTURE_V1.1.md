@@ -2,8 +2,8 @@
 
 **Project:** PNG Public Services Assistant (pilot implementation)  
 **Reusable capability:** Joshua shared RAG engine  
-**Status:** Proposed successor architecture — owner-approved direction; document pending review and merge  
-**Supersedes:** Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0, only after v1.1 is reviewed, accepted and merged  
+**Status:** Approved active architecture — merged through PR #41 on 16 November 2026 (merge commit `eb363795fc74822913c11c8227041fb95919329a`)  
+**Supersedes:** Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0 for future implementation; v1.0 remains a historical design record  
 **Storage baseline:** GitHub is the only permanent application knowledge/artifact store initially  
 **Runtime baseline:** Existing Render services  
 **LLM baseline:** Existing free Groq-hosted model configuration; no paid provider or silent provider/model fallback
@@ -22,15 +22,14 @@ This is still a RAG system: retrieved external or stored evidence is supplied to
 
 ### 1.1 Decision status and transition rule
 
-The owner's approval of Option B authorizes preparation of this successor architecture and delivery plan. It does not, by itself, authorize:
-- merging this document;
-- production code changes or deployment;
+The owner approved Option B and PR #41 was merged. Routine implementation and test work may now proceed within this v1.1 scope under the standing project delivery instructions. This does not authorize:
+- production deployment or production configuration changes;
 - a paid search provider, paid scraping service, paid model or paid infrastructure;
 - changing the current Groq provider/model configuration;
 - changing production source policy or treating arbitrary web content as authoritative;
 - destructive changes to existing issues, branches, pull requests or artifacts.
 
-Until this document is reviewed and merged, v1.0 remains the formally approved technical baseline. No implementation batch should silently reinterpret v1.0 as superseded.
+This v1.1 document is the active technical baseline. The v1.0 documents remain available for historical traceability.
 
 ### 1.2 Core principles
 
@@ -329,7 +328,7 @@ Isolation requirements:
 
 ## 8. Delivery plan and reconciliation with existing batches
 
-The existing seven GitHub issues remain the tracking structure. They should be updated only after this architecture is accepted and after their current descriptions and open PRs are reconciled. Do not create duplicate batch issues.
+The existing seven GitHub issues remain the tracking structure and are being reconciled to this accepted architecture. Do not create duplicate batch issues.
 
 | Existing issue/batch | Revised scope |
 |---|---|
@@ -351,14 +350,13 @@ The existing seven GitHub issues remain the tracking structure. They should be u
 
 ### 8.2 Proposed implementation sequence
 
-1. Finalise and approve this architecture document.
-2. Reconcile Batch 0 and provider feasibility; do not select a provider until terms, free limits and quality are checked.
-3. Implement a provider-neutral search adapter and normalised evidence record in a small, testable batch.
-4. Integrate bounded page retrieval and extraction, reusing current code.
-5. Add source classification, evidence sufficiency and bounded second retrieval.
-6. Strengthen citation/claim verification and high-impact fact handling.
-7. Complete security, privacy, reliability and resource controls.
-8. Evaluate with representative questions and only then release the revised capability.
+1. Reconcile the existing seven batch issues and document provider feasibility; do not select a provider until terms, free limits and PNG/Pacific quality are checked.
+2. Implement a provider-neutral search adapter and normalised evidence record in a small, testable batch.
+3. Integrate bounded page retrieval and extraction, reusing current code.
+4. Add source classification, evidence sufficiency and bounded second retrieval.
+5. Strengthen citation/claim verification and high-impact fact handling.
+6. Complete security, privacy, reliability and resource controls.
+7. Evaluate with representative questions and only then release the revised capability.
 
 ---
 
@@ -438,8 +436,8 @@ Routine implementation and tests may proceed within an approved batch and scope,
 
 ## 12. Final architectural decision requested
 
-The proposed successor direction is:
+The approved active direction is:
 
 **A reusable, web-first Simplified Hybrid RAG engine with approved-source priority, general internet discovery when approved evidence is insufficient, bounded webpage extraction, explicit evidence and citation verification, optional GitHub-stored indexing, existing Render hosting and the existing free Groq inference arrangement.**
 
-This v1.1 document becomes the active architecture only after owner review and merge. Until then, v1.0 remains the approved baseline.
+This v1.1 document is the active architecture following the owner's approval and merge of PR #41.
