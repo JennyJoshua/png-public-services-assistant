@@ -198,3 +198,47 @@ def test_search_provider_protocol_accepts_deterministic_fake_without_network():
     assert [item.rank for item in first] == [1, 2]
     assert [item.provider for item in first] == ["deterministic-test-provider"] * 2
     assert provider.queries == ["Gulf Province public services"] * 2
+
+
+
+def test_fetched_document_requires_canonical_url_to_match_source():
+    source = make_source()
+    with pytest.raises(RetrievalContractError, match="registered source URL"):
+        FetchedDocument(
+            source=source,
+            canonical_url="https://example.gov.pg/other",
+            final_url="https://example.gov.pg/other",
+            title="Public services",
+            content_type="text/html",
+            text=TEXT,
+            retrieved_at=NOW,
+        )
+
+
+def test_fetched_document_rejects_cross_host_final_url():
+    source = make_source()
+    with pytest.raises(RetrievalContractError, match="source host"):
+        FetchedDocument(
+            source=source,
+            canonical_url=SOURCE_URL,
+            final_url="https://unrelated.example/services",
+            title="Public services",
+            content_type="text/html",
+            text=TEXT,
+            retrieved_at=NOW,
+        )
+
+
+def test_evidence_passage_requires_document_url_to_match_source():
+    source = make_source()
+    with pytest.raises(RetrievalContractError, match="source URL"):
+        EvidencePassage(
+            source=source,
+            document_id="document-id",
+            document_url="https://example.gov.pg/other",
+            document_content_hash="a" * 64,
+            passage_index=0,
+            section_path=(),
+            text=TEXT,
+            retrieved_at=NOW,
+        )
