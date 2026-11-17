@@ -1,19 +1,12 @@
 """Live retrieval over curated PNG sources, with an optional grounded model layer."""
-import asyncio
 import math
 import re
-from datetime import datetime, timezone
-from urllib.parse import urlparse
-
-import httpx
 from bs4 import BeautifulSoup
 
 from app.model_provider import ModelProviderError, build_system_prompt, generate_answer, model_is_configured
 from app.retrieval_pipeline import build_evidence_records, page_to_fetched_document
-from app.source_registry import SOURCES
 from app.source_content import assemble_sources_block, get_source_pages
 
-MAX_PAGE_BYTES = 1_500_000
 MAX_TEXT_CHARS = 24_000
 MAX_PASSAGE_CHARS = 1_400
 MAX_SNIPPETS = 12
@@ -158,47 +151,6 @@ def _structured_passages(page: dict) -> list[dict]:
         for passage in _split_passage_block(text):
             passages.append({"text": passage, "section_path": section_path})
     return passages
-
-def _published_date(html: str) -> str | None:
-    soup = BeautifulSoup(html, "html.parser")
-    for key in ("article:published_time", "date", "DC.date", "pubdate"):
-        tag = soup.find("meta", attrs={"property": key}) or soup.find("meta", attrs={"name": key})
-        if tag and tag.get("content"):
-            return tag["content"][:80]
-    time_tag = soup.find("time")
-    return time_tag.get("datetime", "")[:80] or None if time_tag else None
-
-
-async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
-    try:
-        response = await client.get(source.url)
-        final_host = (urlparse(str(response.url)).hostname or "").lower()
-        approved_host = (urlparse(source.url).hostname or "").lower()
-        if final_host != approved_host or response.status_code != 200:
-            return None
-        if "text/html" not in response.headers.get("content-type", "").lower():
-            return None
-        if len(response.content) > MAX_PAGE_BYTES:
-            return None
-        html = response.text
-        content_blocks, page_title = _page_structure(html)
-        text = "\n".join(block["text"] for block in content_blocks)
-        if len(text) < 80:
-            return None
-        return {
-            "institution": source.institution,
-            "title": page_title or source.title,
-            "url": source.url,
-            "final_url": str(response.url),
-            "content_type": response.headers.get("content-type", ""),
-            "publication_date": _published_date(html),
-            "last_checked_at": datetime.now(timezone.utc).isoformat(),
-            "text": text,
-            "blocks": content_blocks,
-        }
-    except (httpx.HTTPError, ValueError, UnicodeError):
-        return None
-
 
 def _passage_blocks(page_text: str) -> list[str]:
     """Keep headings, paragraphs and list items intact as individual passages."""
