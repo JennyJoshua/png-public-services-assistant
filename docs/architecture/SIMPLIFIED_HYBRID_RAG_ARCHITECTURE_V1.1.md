@@ -2,8 +2,8 @@
 
 **Project:** PNG Public Services Assistant (pilot implementation)  
 **Reusable capability:** Joshua shared RAG engine  
-**Status:** Proposed successor architecture — owner-approved direction; document pending review and merge  
-**Supersedes:** Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0, only after v1.1 is reviewed, accepted and merged  
+**Status:** Active owner-approved architecture; adopted and merged through PR #41  
+**Supersedes:** Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0 for new implementation decisions; historical v1.0 work remains retained where compatible  
 **Storage baseline:** GitHub is the only permanent application knowledge/artifact store initially  
 **Runtime baseline:** Existing Render services  
 **LLM baseline:** Existing free Groq-hosted model configuration; no paid provider or silent provider/model fallback
@@ -30,7 +30,7 @@ The owner's approval of Option B authorizes preparation of this successor archit
 - changing production source policy or treating arbitrary web content as authoritative;
 - destructive changes to existing issues, branches, pull requests or artifacts.
 
-Until this document is reviewed and merged, v1.0 remains the formally approved technical baseline. No implementation batch should silently reinterpret v1.0 as superseded.
+This document was reviewed and merged through PR #41 and is the controlling technical baseline. Historical v1.0 records remain available for traceability; where they conflict, v1.1 controls.
 
 ### 1.2 Core principles
 
@@ -442,4 +442,4 @@ The proposed successor direction is:
 
 **A reusable, web-first Simplified Hybrid RAG engine with approved-source priority, general internet discovery when approved evidence is insufficient, bounded webpage extraction, explicit evidence and citation verification, optional GitHub-stored indexing, existing Render hosting and the existing free Groq inference arrangement.**
 
-This v1.1 document becomes the active architecture only after owner review and merge. Until then, v1.0 remains the approved baseline.
+This v1.1 document is the active owner-approved architecture, merged through PR #41. Historical v1.0 documents remain retained for traceability.
