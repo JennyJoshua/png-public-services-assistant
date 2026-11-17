@@ -94,7 +94,7 @@ The current architecture is a **modular monolith**, not microservices.
 | Document parsing | Docling candidate | Later phase; undecided |
 | Embeddings/reranking | BGE-M3 and compatible reranker candidates | Undecided |
 | Document/PDF tooling | ReportLab, PyMuPDF, pypdf, and DOCX tooling candidates | Later phase |
-| Hosting | GitHub, Netlify, Render, Supabase are candidates | Not approved/selected for production |
+| Hosting | Render hosts the prototype frontend and FastAPI backend as separate free web services; Supabase remains a possible future managed data service subject to the approved architecture and approval gates. | Render is the selected current hosting platform; production readiness and free-tier limitations remain subject to validation. |
 
 Candidate model families include Qwen and Gemma. These are not selected production dependencies. Verify current licences, model versions, language performance, hardware/resource needs, hosting feasibility, and actual benchmark results before selection.
 
