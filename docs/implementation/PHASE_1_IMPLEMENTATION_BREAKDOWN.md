@@ -95,7 +95,7 @@ The layout is a target. Add modules only when the corresponding work package nee
 - A free plan is for testing/prototyping only where provider terms say so; it is not automatically suitable for a public service.
 - Render free web services sleep after 15 minutes idle and may take about a minute to wake; local filesystem is ephemeral. Render free Postgres expires after 30 days and has no backups.
 - Supabase Free includes a 500 MB database and 1 GB file storage; free projects can pause after a week of inactivity and do not include automatic backups.
-- Netlify Free currently uses a monthly credit allowance. Confirm current credit consumption before relying on it for public traffic.
+- The frontend is deployed as a Render web service on the free tier. Confirm current Render free-service limits, sleep/cold-start behavior, build usage, bandwidth, and availability before relying on it for public traffic.
 - Acceptance: written recommendation, limitations, rollback plan, and owner approval before any production deployment.
 
 ## 5. Current technical evaluation (13 November 2026)
@@ -104,8 +104,8 @@ The layout is a target. Add modules only when the corresponding work package nee
 |---|---|---|
 | Frontend | Next.js 16.x, React, TypeScript | Next.js 16 is Active LTS. Current Next.js installation guidance requires Node.js 20.9+. Pin an actively supported Node LTS compatible with the selected framework. |
 | Backend | FastAPI, Python | FastAPI supports Python 3.10+. Pin a supported Python minor version and exact dependency lock after CI validation. |
-| Frontend hosting | Netlify Free or another static/web host | Netlify advertises a $0 Free tier with a 300-credit monthly limit; consumption and current limits must be monitored. |
-| API hosting | Render Free for prototype only | Free services sleep after 15 minutes idle, wake slowly, and have ephemeral filesystems. Not recommended as a public-service production target. |
+| Frontend hosting | Render Free web service (current prototype) | Free-tier sleep/cold-start behavior and current resource limits must be monitored; production suitability is not assumed. |
+| API hosting | Render Free web service (current prototype) | Free services may sleep after inactivity, have cold starts, and use ephemeral filesystems. Not approved as a production-readiness conclusion. |
 | Database | Supabase Free candidate | 500 MB DB, 1 GB storage; projects pause after inactivity and no automatic backups are included on Free. Suitable for experiments only until retention/availability requirements are resolved. |
 | Model | Local/free model candidates | No production model selected. Public hosted free inference cannot be assumed stable or private; local inference may exceed free hosting resources. |
 | Retrieval | Small local corpus and provider-neutral retriever | Start simple; vector database is not justified until corpus size and retrieval evaluation require it. |
@@ -134,7 +134,7 @@ Each work package should be tested before proceeding. The completed Phase 1 work
 - FastAPI requirements and documentation: https://fastapi.tiangolo.com/
 - Render free service limits: https://render.com/docs/free
 - Render free service behavior: https://render.com/docs/faq
-- Netlify pricing: https://www.netlify.com/pricing/
+- Render free services: https://render.com/docs/free
 - Supabase pricing: https://supabase.com/pricing
 - Supabase billing and free-tier quotas: https://supabase.com/docs/guides/platform/billing-on-supabase
 
