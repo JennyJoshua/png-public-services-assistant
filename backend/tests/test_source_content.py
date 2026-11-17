@@ -92,3 +92,28 @@ def test_fetch_one_reports_no_text_without_throwing():
     assert status["fetch_succeeded"] is True
     assert status["usable_text"] is False
     assert "usable text" in status["error"]
+
+
+def test_fetch_one_stops_when_download_exceeds_configured_byte_limit(monkeypatch):
+    from app import source_content
+
+    source = SOURCES[0]
+    monkeypatch.setattr(source_content, "MAX_DOWNLOAD_BYTES", 100)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            headers={"content-type": "text/html"},
+            content=b"<html><body>" + (b"x" * 300) + b"</body></html>",
+        )
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await _fetch_one(client, source)
+
+    page, status = asyncio.run(run())
+    assert page is None
+    assert status["fetch_succeeded"] is True
+    assert status["usable_text"] is False
+    assert "100 byte source limit" in status["error"]
