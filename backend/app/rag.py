@@ -9,6 +9,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.model_provider import ModelProviderError, generate_answer, model_is_configured
+from app.retrieval_pipeline import build_evidence_records, page_to_fetched_document
 from app.source_registry import SOURCES
 
 MAX_PAGE_BYTES = 1_500_000
@@ -52,45 +53,110 @@ def _query_tokens(question: str) -> set[str]:
     return tokens
 
 
-def _page_text(html: str) -> tuple[str, str | None]:
-    """Extract semantic content blocks without flattening lists into page-wide prose."""
+def _page_structure(html: str) -> tuple[list[dict], str | None]:
+    """Extract ordered content blocks and their active heading hierarchy."""
     soup = BeautifulSoup(html, "html.parser")
     title = soup.title.get_text(" ", strip=True) if soup.title else None
     for element in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript", "svg"]):
         element.decompose()
 
     main = soup.find("main") or soup.find("article") or soup.body or soup
-    blocks: list[str] = []
+    blocks: list[dict] = []
+    headings: list[str | None] = [None] * 6
+
     for element in main.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote", "dt", "dd", "tr"]):
         if element.name == "p" and element.find_parent("li"):
             continue
-        if element.name == "tr":
-            cells = element.find_all(["th", "td"], recursive=False)
-            if not cells or all(cell.name == "th" for cell in cells):
-                continue
-            table = element.find_parent("table")
-            header_row = table.find("tr") if table else None
-            headers = (
-                [re.sub(r"\s+", " ", cell.get_text(" ", strip=True)).strip()
-                 for cell in header_row.find_all(["th", "td"], recursive=False)]
-                if header_row else []
-            )
-            values = [re.sub(r"\s+", " ", cell.get_text(" ", strip=True)).strip() for cell in cells]
-            value = " | ".join(
-                f"{header}: {cell}" for header, cell in zip(headers, values)
-            ) if headers and len(headers) == len(values) else " | ".join(values)
-        else:
+        if element.name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
             value = re.sub(r"\s+", " ", element.get_text(" ", strip=True)).strip()
-        if value and (not blocks or value != blocks[-1]):
-            blocks.append(value)
+            level = int(element.name[1])
+            headings[level - 1] = value or None
+            for index in range(level, 6):
+                headings[index] = None
+            section_path = tuple(item for item in headings if item)
+        else:
+            section_path = tuple(item for item in headings if item)
+            if element.name == "tr":
+                cells = element.find_all(["th", "td"], recursive=False)
+                if not cells or all(cell.name == "th" for cell in cells):
+                    continue
+                table = element.find_parent("table")
+                header_row = table.find("tr") if table else None
+                headers = (
+                    [re.sub(r"\s+", " ", cell.get_text(" ", strip=True)).strip()
+                     for cell in header_row.find_all(["th", "td"], recursive=False)]
+                    if header_row else []
+                )
+                values = [re.sub(r"\s+", " ", cell.get_text(" ", strip=True)).strip() for cell in cells]
+                value = " | ".join(
+                    f"{header}: {cell}" for header, cell in zip(headers, values)
+                ) if headers and len(headers) == len(values) else " | ".join(values)
+            else:
+                value = re.sub(r"\s+", " ", element.get_text(" ", strip=True)).strip()
 
-    # Some CMS pages use content divs without semantic paragraph tags.
+        if value and (not blocks or value != blocks[-1]["text"]):
+            blocks.append({"text": value, "section_path": section_path})
+
     if not blocks:
         value = re.sub(r"\s+", " ", main.get_text(" ", strip=True)).strip()
         if value:
-            blocks.append(value)
-    return "\n".join(blocks)[:MAX_TEXT_CHARS], title
+            blocks.append({"text": value, "section_path": ()})
 
+    # Bound extracted text without losing block order or heading provenance.
+    bounded: list[dict] = []
+    remaining = MAX_TEXT_CHARS
+    for block in blocks:
+        if remaining <= 0:
+            break
+        value = block["text"][:remaining]
+        if value:
+            bounded.append({**block, "text": value})
+            remaining -= len(value) + 1
+    return bounded, title
+
+
+def _page_text(html: str) -> tuple[str, str | None]:
+    """Compatibility wrapper returning the historic newline-delimited text."""
+    blocks, title = _page_structure(html)
+    return "\n".join(block["text"] for block in blocks), title
+
+
+def _split_passage_block(block: str) -> list[str]:
+    """Split exceptionally long blocks while retaining sentence boundaries."""
+    if len(block) <= MAX_PASSAGE_CHARS:
+        return [block]
+    sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", block)
+    passages: list[str] = []
+    current = ""
+    for sentence in sentences:
+        if current and len(current) + len(sentence) + 1 > MAX_PASSAGE_CHARS:
+            passages.append(current)
+            current = sentence
+        else:
+            current = f"{current} {sentence}".strip()
+    if current:
+        passages.append(current)
+    return passages
+
+
+def _structured_passages(page: dict) -> list[dict]:
+    """Return ordered passage text with its section path, when extraction has it."""
+    blocks = page.get("blocks")
+    if not isinstance(blocks, list):
+        return [
+            {"text": text, "section_path": ()}
+            for text in _passage_blocks(str(page.get("text", "")))
+        ]
+
+    passages: list[dict] = []
+    for block in blocks:
+        text = str(block.get("text", "")).strip()
+        section_path = tuple(str(item) for item in block.get("section_path", ()))
+        if not text:
+            continue
+        for passage in _split_passage_block(text):
+            passages.append({"text": passage, "section_path": section_path})
+    return passages
 
 def _published_date(html: str) -> str | None:
     soup = BeautifulSoup(html, "html.parser")
@@ -114,16 +180,20 @@ async def _fetch_source(client: httpx.AsyncClient, source) -> dict | None:
         if len(response.content) > MAX_PAGE_BYTES:
             return None
         html = response.text
-        text, page_title = _page_text(html)
+        content_blocks, page_title = _page_structure(html)
+        text = "\n".join(block["text"] for block in content_blocks)
         if len(text) < 80:
             return None
         return {
             "institution": source.institution,
             "title": page_title or source.title,
             "url": source.url,
+            "final_url": str(response.url),
+            "content_type": response.headers.get("content-type", ""),
             "publication_date": _published_date(html),
             "last_checked_at": datetime.now(timezone.utc).isoformat(),
             "text": text,
+            "blocks": content_blocks,
         }
     except (httpx.HTTPError, ValueError, UnicodeError):
         return None
@@ -170,7 +240,8 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
 
     for page_index, page in enumerate(pages):
         title_tokens = _tokens(str(page.get("title", "")))
-        for passage_index, passage in enumerate(_passage_blocks(page.get("text", ""))):
+        for passage_index, passage_record in enumerate(_structured_passages(page)):
+            passage = passage_record["text"]
             if len(passage) < 2:
                 continue
             tokens = re.findall(r"[a-z0-9]{2,}", passage.lower())
@@ -184,6 +255,7 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
                 "page_index": page_index,
                 "passage_index": passage_index,
                 "text": passage,
+                "section_path": passage_record["section_path"],
                 "tokens": frequencies,
                 "length": sum(frequencies.values()),
                 "title_tokens": title_tokens,
@@ -266,6 +338,8 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
             selected.append({
                 "score": score,
                 "text": item["text"],
+                "passage_index": item["passage_index"],
+                "section_path": item["section_path"],
                 "source": item["source"],
             })
             if len(selected) >= MAX_SNIPPETS:
@@ -282,24 +356,26 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
         pages = await asyncio.gather(*(_fetch_source(client, source) for source in SOURCES))
 
     available_pages = [page for page in pages if page]
+    fetched_documents = [page_to_fetched_document(page) for page in available_pages]
     passages = _rank_passages(question, available_pages)
+    evidence_records = build_evidence_records(fetched_documents, passages)
 
     citations: list[dict] = []
     citation_indexes: dict[str, int] = {}
     evidence: list[dict] = []
-    for passage in passages:
-        source = passage["source"]
-        url = source["url"]
+    for passage in evidence_records:
+        source = passage.source
+        url = source.url
         if url not in citation_indexes:
             citation_indexes[url] = len(citations) + 1
             citations.append({
-                "title": source["title"],
-                "institution": source["institution"],
+                "title": source.title,
+                "institution": source.institution,
                 "url": url,
-                "publication_date": source["publication_date"],
-                "last_checked_at": source["last_checked_at"],
+                "publication_date": source.publication_date,
+                "last_checked_at": source.last_fetched_at.isoformat() if source.last_fetched_at else None,
             })
-        evidence.append({"text": passage["text"], "citation_index": citation_indexes[url]})
+        evidence.append({"text": passage.text, "citation_index": citation_indexes[url]})
 
     warnings: list[str] = []
     try:
@@ -319,7 +395,7 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
             "warnings": warnings,
         }
 
-    if not passages:
+    if not evidence_records:
         fallback = (
             "I could not find a sufficiently relevant passage in the currently approved sources. "
             "I won't guess at official requirements. Please check the responsible agency's website "
