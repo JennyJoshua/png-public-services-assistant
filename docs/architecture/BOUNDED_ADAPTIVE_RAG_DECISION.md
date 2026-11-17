@@ -1,18 +1,20 @@
-# Bounded Adaptive RAG — Architecture Decision and Delivery Roadmap
+# Bounded Adaptive RAG — Historical Architecture Decision and Delivery Roadmap
 
-**Status:** Reconciled to approved Technical Architecture and Interface Specification v1.0  
-**Controlling baseline:** [BOUNDED_ADAPTIVE_RAG_TECHNICAL_SPEC.md](./BOUNDED_ADAPTIVE_RAG_TECHNICAL_SPEC.md)  
-**Approval:** Project owner approved v1.0 on 15 November 2026.
+**Status:** Historical; superseded where it conflicts with the owner-approved Simplified Hybrid RAG Architecture v1.1.  
+**Current controlling baseline:** [Simplified Hybrid RAG Architecture and Delivery Plan v1.1](./SIMPLIFIED_HYBRID_RAG_ARCHITECTURE_V1.1.md)  
+**v1.1 approval and adoption:** Project owner selected Option B — Simplified hybrid; PR #41 merged the v1.1 architecture on 16 November 2026.
 
-## Decision
+> This document records the earlier v1.0 bounded-adaptive design and its historical decisions. It is retained for traceability. New work must follow v1.1 where the two documents differ.
+
+## Historical v1.0 decision
 
 Adopt bounded adaptive RAG. The model may interpret, reformulate and answer; application code controls approved-source access, retrieval, retry limits, evidence verification, citation integrity, resource budgets and abstention.
 
-The online request lifecycle is: input guard → structured question plan → first retrieval → evidence-sufficiency gate → at most one additional retrieval → evidence assembly → answer generation → deterministic verification → response composition or safe fallback.
+The online request lifecycle was: input guard → structured question plan → first retrieval → evidence-sufficiency gate → at most one additional retrieval → evidence assembly → answer generation → deterministic verification → response composition or safe fallback.
 
-No unbounded agent/tool loop, model training, unrestricted crawling, arbitrary URL ingestion or persistent conversation storage is in scope.
+No unbounded agent/tool loop, model training, unrestricted crawling, arbitrary URL ingestion or persistent conversation storage was in scope.
 
-## Architecture decisions
+## Historical architecture decisions
 
 ### Sources and index
 - Use a curated exact-URL source registry.
@@ -20,7 +22,7 @@ No unbounded agent/tool loop, model training, unrestricted crawling, arbitrary U
 - Preserve document structure: headings, list groups, table headers/rows, section paths and document order.
 - Use stable document and passage IDs.
 - Build a reproducible, versioned index offline where practical.
-- Load the index read-only at runtime only after validating Render storage, memory, startup, replacement and rollback behaviour. Do not assume the Render filesystem is durable.
+- Do not assume the Render filesystem is durable.
 
 ### Retrieval
 - Keep retrieval strategies modular and general-purpose.
@@ -34,45 +36,42 @@ No unbounded agent/tool loop, model training, unrestricted crawling, arbitrary U
 - Map each material official claim to supplied passage IDs.
 - Validate citation IDs and evidence support independently of the model.
 - Treat fees, amounts, dates, deadlines, form codes, agency names and eligibility conditions as high-risk facts.
-- Do not mistake the presence of a number in a passage for proof that it is attached to the correct condition.
 - Surface conflicting or stale sources; abstain or provide only supported parts when evidence is insufficient.
 - Use a controlled source-linked/extractive fallback when generation or verification fails.
 
 ### Operational controls
-- Keep current Render/Groq arrangement as default.
+- Keep the then-current Render/Groq arrangement as default.
 - Measure tokens, latency, memory, index size and concurrency before fixing budgets.
 - Bound requests, history, evidence, retries and model calls.
 - Keep secrets server-side and minimise logging.
 - Treat retrieved text as untrusted data and test prompt-injection resistance.
 
-## Validation gates
+## Historical validation gates
 
-1. **Storage gate:** demonstrate index artifact loading, startup, memory, replacement and rollback on the actual Render service.
-2. **Retrieval gate:** pass structure-aware extraction and general regression tests, including NID procedure ordering and IPA checklist fixtures.
-3. **Adaptive gate:** prove the retry limit cannot exceed one additional retrieval.
-4. **Evidence gate:** test claim-to-passage mapping, citation integrity, high-risk facts, conflicts and abstention.
-5. **Operational gate:** test provider failures, quotas, privacy, prompt injection and bounded resource use.
-6. **Release gate:** publish reproducible test results, limitations and measured resource use; obtain explicit owner approval before merge/deployment.
+1. Storage: demonstrate artifact loading, startup, memory, replacement and rollback.
+2. Retrieval: pass structure-aware extraction and general regression tests, including NID procedure ordering and IPA checklist fixtures.
+3. Adaptive: prove the retry limit cannot exceed one additional retrieval.
+4. Evidence: test claim-to-passage mapping, citation integrity, high-risk facts, conflicts and abstention.
+5. Operational: test provider failures, quotas, privacy, prompt injection and bounded resource use.
+6. Release: publish reproducible test results, limitations and measured resource use.
 
-## Delivery phases
+## Historical delivery phases
 
-- **Phase 0 — Baseline and validation:** publish the approved specification; reconcile this roadmap; validate Render index delivery; define evaluation data and technical budgets only after measurement.
-- **Phase 1 — General retrieval foundation:** stable structures, structure-aware extraction, modular retrieval, regression fixtures.
-- **Phase 2 — Source ingestion and index:** source metadata, offline build, versioned index, change detection and review.
-- **Phase 3 — Bounded adaptation:** question planning, sufficiency gate and one controlled second retrieval.
-- **Phase 4 — Verification:** claim-to-passage mapping, high-risk fact checks, abstention and fallback.
-- **Phase 5 — Operational readiness:** quotas, monitoring, privacy, human-reviewed evaluation and release decision.
+- Phase 0 — Baseline and validation.
+- Phase 1 — General retrieval foundation.
+- Phase 2 — Source ingestion and index.
+- Phase 3 — Bounded adaptation.
+- Phase 4 — Verification.
+- Phase 5 — Operational readiness.
 
-## Existing pull-request reconciliation
+## Historical pull-request reconciliation
 
-The following status supersedes the historical PR notes that were written before the later implementation work:
-
-- **PR #10** remains open and unmerged. Its IPA-specific retrieval rule remains excluded. Preserve useful official IPA checklist cases as general evaluation fixtures; do not merge the old branch.
-- **PR #11** remains open and unmerged as an intermediate branch. Its central system-prompt and generalisation direction was partly delivered through merged PR #23. Do not merge the old branch as-is; reconcile any remaining useful changes against current main.
-- **PR #13** remains open as a draft and is superseded by the approved baseline published through merged PR #14.
-- **PR #14** published the approved specification, reconciled decision/roadmap and implementation backlog.
-- **PR #22** remains open and unmerged as an earlier artifact prototype; its strict artifact foundation was superseded by merged PR #24. Do not merge the old branch.
-- **PRs #23–#27** are merged. They establish the general retrieval foundation, strict artifact schema/loader, approved-source index builder, controlled ephemeral audit workflow, and audit CLI import-path correction respectively. Their merge does not mean the associated backlog acceptance criteria are all complete.
+- PR #10 remains open and unmerged; its IPA-specific retrieval rule remains excluded.
+- PR #11 remains open and unmerged as an intermediate branch; useful generalisation work was partly delivered through PR #23.
+- PR #13 remains an open draft and was superseded by the approved baseline published through PR #14.
+- PR #14 published the v1.0 specification, decision/roadmap and backlog.
+- PR #22 remains open and unmerged as an earlier artifact prototype; its strict artifact foundation was superseded by PR #24.
+- PRs #23–#27 are merged and provide general retrieval and optional index foundations.
 
 ## Data Analysis rule
 
@@ -80,4 +79,4 @@ Do not fabricate statistical or retrieval-performance conclusions. If a task gen
 
 ## Approval boundaries
 
-This document and the approved technical specification do not authorise production deployment, paid services, destructive actions, database migrations, material scope changes or merging existing pull requests. Those require explicit owner approval.
+This historical document does not authorise production deployment, paid services, destructive actions, database migrations, material scope changes or merging existing pull requests. Apply the current project approval gates and the v1.1 baseline.
