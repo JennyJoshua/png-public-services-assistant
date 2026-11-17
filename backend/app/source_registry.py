@@ -2,8 +2,16 @@
 
 Only these exact HTTPS seed URLs are fetched. This module intentionally does not
 crawl arbitrary links or accept user-supplied URLs.
+
+Governance metadata is deliberately nullable: unknown authority, document, language,
+publication, review, fetch and content-integrity facts must not be guessed. Newly
+registered sources remain pending review until those facts have been assessed.
 """
 from dataclasses import dataclass
+from typing import Literal
+
+
+SourceStatus = Literal["active", "superseded", "broken", "pending_review"]
 
 
 @dataclass(frozen=True)
@@ -11,6 +19,16 @@ class Source:
     institution: str
     title: str
     url: str
+    authority_tier: str | None = None
+    document_type: str | None = None
+    jurisdiction: str | None = None
+    language: str | None = None
+    publication_date: str | None = None
+    effective_date: str | None = None
+    last_fetched_at: str | None = None
+    last_reviewed_at: str | None = None
+    content_hash: str | None = None
+    status: SourceStatus = "pending_review"
 
 
 SOURCES: tuple[Source, ...] = (
