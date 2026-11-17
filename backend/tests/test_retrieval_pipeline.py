@@ -131,3 +131,16 @@ def test_page_publication_date_is_kept_as_document_metadata_only():
     assert document.publication_date == "2024-06-15"
     assert document.source.publication_date is None
     assert document.source.last_reviewed_at is None
+
+def test_adapter_allows_redirect_between_png_government_hosts():
+    document = page(final_url="https://www.pngcir.gov.pg/nid-registration-information")
+    fetched = page_to_fetched_document(document)
+    assert fetched.canonical_url == URL
+    assert fetched.final_url == "https://www.pngcir.gov.pg/nid-registration-information"
+
+
+def test_adapter_rejects_redirect_from_png_government_host_to_non_government_host():
+    with pytest.raises(RetrievalContractError, match="registered source host"):
+        page_to_fetched_document(
+            page(final_url="https://www.example.com/collect")
+        )
