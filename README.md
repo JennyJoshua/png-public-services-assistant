@@ -11,6 +11,8 @@ The project-owner-approved **Simplified Hybrid RAG Architecture and Delivery Pla
 - [Historical Bounded Adaptive RAG Decision and Roadmap](docs/architecture/BOUNDED_ADAPTIVE_RAG_DECISION.md)
 - [Historical Bounded Adaptive RAG Implementation Backlog v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md)
 - [Source Policy](docs/architecture/RAG_SOURCE_POLICY.md)
+- [Source Classification and Evidence Governance Policy](docs/architecture/RAG_SOURCE_CLASSIFICATION_POLICY.md)
+- [PNG/Pacific Search Evaluation Protocol](docs/research/PNG_PACIFIC_SEARCH_EVALUATION_PROTOCOL.md)
 - [Hybrid Model Policy](docs/architecture/HYBRID_MODEL_POLICY.md)
 - [Search Provider Feasibility Review — 17 November 2026](docs/research/SEARCH_PROVIDER_FEASIBILITY_2026-11-17.md)
 
