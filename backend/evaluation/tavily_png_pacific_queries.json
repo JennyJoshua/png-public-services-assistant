@@ -1,0 +1,92 @@
+[
+  {
+    "id": "Q01",
+    "country": "papua new guinea",
+    "query": "Papua New Guinea National ID registration process official requirements form and in-person fingerprint capture",
+    "reference_urls": [
+      "https://pngcir.gov.pg/nid-registration-information/",
+      "https://pngcir.gov.pg/downloads/"
+    ]
+  },
+  {
+    "id": "Q02",
+    "country": "papua new guinea",
+    "query": "Papua New Guinea business name registration company incorporation official IPA process forms fees",
+    "reference_urls": [
+      "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
+      "https://www.ipa.gov.pg/public/prescribedforms.aspx?lang=en-US"
+    ]
+  },
+  {
+    "id": "Q03",
+    "country": "papua new guinea",
+    "query": "Papua New Guinea individual taxpayer identification number TIN registration official IRC form proof of identity",
+    "reference_urls": [
+      "https://irc.gov.pg/pages/know-your-taxes/tin-registration",
+      "https://static.irc.gov.pg/2021/December/E6wskE-media-IRC-TIN4I-Registration.pdf"
+    ]
+  },
+  {
+    "id": "Q04",
+    "country": "papua new guinea",
+    "query": "Papua New Guinea passport application official Immigration and Citizenship Authority requirements forms",
+    "reference_urls": [
+      "https://ica.gov.pg/passport/applying-for-a-png-passport",
+      "https://ica.gov.pg/passport/application-forms"
+    ]
+  },
+  {
+    "id": "Q05",
+    "country": "papua new guinea",
+    "query": "Papua New Guinea police clearance application official RPNGC online process requirements",
+    "reference_urls": [
+      "https://rpngc.gov.pg/advice-services/epolice-clearance/",
+      "https://rpngc.gov.pg/advice-services/police-clearance/"
+    ]
+  },
+  {
+    "id": "Q06",
+    "country": "papua new guinea",
+    "query": "Papua New Guinea driver licence application renewal official Road Transport Authority requirements",
+    "reference_urls": [
+      "https://rta.gov.pg/licences-approvals/driver-licensing/"
+    ]
+  },
+  {
+    "id": "Q07",
+    "country": "papua new guinea",
+    "query": "Gulf Province Papua New Guinea provincial government public services districts administration contact information",
+    "reference_urls": [
+      "https://www.gulf.gov.pg/",
+      "https://www.gulf.gov.pg/contact-us/"
+    ]
+  },
+  {
+    "id": "Q08",
+    "country": "papua new guinea",
+    "query": "Papua New Guinea government public service information education free education policy official government sources",
+    "reference_urls": [
+      "https://www.education.gov.pg/Government-Tuition-Fee-Subsidy-Report/",
+      "https://www.education.gov.pg/admin/images/products/03_02_26%20_N_MPS_on_GFEP_202695.pdf"
+    ]
+  },
+  {
+    "id": "Q09",
+    "country": "fiji",
+    "query": "Fiji government online public services business registration official e-services portal",
+    "reference_urls": [
+      "https://www.fiji.gov.fj/",
+      "https://www.businessnow.gov.fj/e-service/",
+      "https://directory.digital.gov.fj/"
+    ]
+  },
+  {
+    "id": "Q10",
+    "country": "solomon islands",
+    "query": "Solomon Islands government public services portal official government services",
+    "reference_urls": [
+      "https://solomons.gov.sb/",
+      "https://solomons.gov.sb/ministry-of-public-service/"
+    ]
+  }
+]
