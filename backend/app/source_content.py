@@ -110,24 +110,41 @@ def _redirect_is_allowed(original_url: str, final_url: str) -> bool:
 async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, dict]:
     attempted_at = datetime.now(timezone.utc).isoformat()
     status = dict(_STATUS[source.url])
-    status.update({"last_attempt_at": attempted_at, "fetch_succeeded": False, "usable_text": False, "text_chars": 0, "error": None})
+    status.update({
+        "last_attempt_at": attempted_at,
+        "fetch_succeeded": False,
+        "usable_text": False,
+        "text_chars": 0,
+        "error": None,
+    })
     try:
-        response = await client.get(source.url)
-        status["http_status"] = response.status_code
-        status["final_url"] = str(response.url)
-        if response.status_code != 200:
-            raise ValueError(f"HTTP {response.status_code}")
-        status["fetch_succeeded"] = True
-        if not _redirect_is_allowed(source.url, str(response.url)):
-            raise ValueError("Redirect destination is outside the approved HTTPS government domain")
-        if len(response.content) > MAX_DOWNLOAD_BYTES:
-            raise ValueError("Download exceeded the 5 MB source limit")
-        content_type = response.headers.get("content-type", "").lower()
-        is_pdf = "application/pdf" in content_type or urlparse(str(response.url)).path.lower().endswith(".pdf")
+        async with client.stream("GET", source.url) as response:
+            status["http_status"] = response.status_code
+            status["final_url"] = str(response.url)
+            if response.status_code != 200:
+                raise ValueError(f"HTTP {response.status_code}")
+            status["fetch_succeeded"] = True
+            if not _redirect_is_allowed(source.url, str(response.url)):
+                raise ValueError("Redirect destination is outside the approved HTTPS government domain")
+            content_length = response.headers.get("content-length")
+            if content_length and int(content_length) > MAX_DOWNLOAD_BYTES:
+                raise ValueError(f"Download exceeded the {MAX_DOWNLOAD_BYTES} byte source limit")
+            chunks: list[bytes] = []
+            downloaded = 0
+            async for chunk in response.aiter_bytes():
+                downloaded += len(chunk)
+                if downloaded > MAX_DOWNLOAD_BYTES:
+                    raise ValueError(f"Download exceeded the {MAX_DOWNLOAD_BYTES} byte source limit")
+                chunks.append(chunk)
+            raw = b"".join(chunks)
+            content_type = response.headers.get("content-type", "").lower()
+            final_url = str(response.url)
+
+        is_pdf = "application/pdf" in content_type or urlparse(final_url).path.lower().endswith(".pdf")
         if is_pdf:
-            text, title = _extract_pdf(response.content)
+            text, title = _extract_pdf(raw)
         elif "text/html" in content_type or "application/xhtml" in content_type:
-            text, title = _extract_html(response.content)
+            text, title = _extract_html(raw)
         else:
             raise ValueError(f"Unsupported content type: {content_type or 'missing'}")
         if len(text) < 40:
@@ -139,7 +156,7 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
             "title": title or source.title,
             "topic": source.title,
             "url": source.url,
-            "final_url": str(response.url),
+            "final_url": final_url,
             "content_type": content_type,
             "publication_date": None,
             "last_checked_at": fetched_at,
