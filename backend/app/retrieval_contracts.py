@@ -137,8 +137,16 @@ class FetchedDocument:
         final = urlsplit(self.final_url)
         if self.canonical_url != self.source.url:
             raise RetrievalContractError("Canonical URL must match the registered source URL.")
-        if (canonical.hostname or "").lower() != (final.hostname or "").lower():
-            raise RetrievalContractError("Final URL must remain on the canonical source host.")
+        canonical_host = (canonical.hostname or "").lower()
+        final_host = (final.hostname or "").lower()
+        same_host = canonical_host == final_host
+        approved_png_government_redirect = (
+            canonical_host.endswith(".gov.pg") and final_host.endswith(".gov.pg")
+        )
+        if not (same_host or approved_png_government_redirect):
+            raise RetrievalContractError(
+                "Final URL must remain on the canonical host or another .gov.pg host."
+            )
         if self.retrieved_at.tzinfo is None:
             raise RetrievalContractError("Document retrieval timestamp must include a timezone.")
         if not self.title.strip():

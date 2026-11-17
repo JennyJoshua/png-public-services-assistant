@@ -217,7 +217,7 @@ def test_fetched_document_requires_canonical_url_to_match_source():
 
 def test_fetched_document_rejects_cross_host_final_url():
     source = make_source()
-    with pytest.raises(RetrievalContractError, match="source host"):
+    with pytest.raises(RetrievalContractError, match="canonical host"):
         FetchedDocument(
             source=source,
             canonical_url=SOURCE_URL,
@@ -239,6 +239,47 @@ def test_evidence_passage_requires_document_url_to_match_source():
             document_content_hash="a" * 64,
             passage_index=0,
             section_path=(),
+            text=TEXT,
+            retrieved_at=NOW,
+        )
+
+def test_fetched_document_allows_redirect_between_png_government_hosts():
+    source = make_source()
+    document = FetchedDocument(
+        source=source,
+        canonical_url=SOURCE_URL,
+        final_url="https://www.example.gov.pg/services",
+        title="Public services",
+        content_type="text/html",
+        text=TEXT,
+        retrieved_at=NOW,
+    )
+    assert document.final_url == "https://www.example.gov.pg/services"
+
+
+def test_fetched_document_rejects_redirect_from_png_government_host_to_external_host():
+    source = make_source()
+    with pytest.raises(RetrievalContractError, match="canonical host"):
+        FetchedDocument(
+            source=source,
+            canonical_url=SOURCE_URL,
+            final_url="https://example.com/services",
+            title="Public services",
+            content_type="text/html",
+            text=TEXT,
+            retrieved_at=NOW,
+        )
+
+
+def test_fetched_document_rejects_redirect_from_non_government_host_to_gov_pg():
+    source = make_source(url="https://example.com/services")
+    with pytest.raises(RetrievalContractError, match="canonical host"):
+        FetchedDocument(
+            source=source,
+            canonical_url=source.url,
+            final_url="https://other.gov.pg/services",
+            title="Public services",
+            content_type="text/html",
             text=TEXT,
             retrieved_at=NOW,
         )
