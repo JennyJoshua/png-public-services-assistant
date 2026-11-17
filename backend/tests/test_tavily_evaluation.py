@@ -111,4 +111,12 @@ def test_query_fixture_has_ten_synthetic_queries():
     fixture = load_query_fixture(str(fixture_path))
     assert len(fixture) == 10
     assert {item["id"] for item in fixture} == {f"Q{i:02d}" for i in range(1, 11)}
-    assert all("Papua New Guinea" in item["query"] or item["country"] != "papua new guinea" for item in fixture)
+    assert all("Papua New Guinea" in item["query"] or item.get("country") != "papua new guinea" for item in fixture)
+    assert fixture[-1]["id"] == "Q10"
+    assert "country" not in fixture[-1]
+
+
+def test_request_payload_omits_unsupported_optional_country_boost():
+    query = {**QUERY, "country": None}
+    payload = request_payload(query)
+    assert "country" not in payload

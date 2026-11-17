@@ -21,12 +21,11 @@ REQUEST_TIMEOUT_SECONDS = 20.0
 
 def request_payload(query: dict[str, Any]) -> dict[str, Any]:
     """Build a bounded search-only request; disable generated answers/raw pages."""
-    return {
+    payload = {
         "query": str(query["query"]),
         "search_depth": SEARCH_DEPTH,
         "max_results": MAX_RESULTS,
         "topic": "general",
-        "country": str(query["country"]),
         "language": "en",
         "include_published_date": True,
         "include_answer": False,
@@ -35,6 +34,9 @@ def request_payload(query: dict[str, Any]) -> dict[str, Any]:
         "include_usage": True,
         "safe_search": True,
     }
+    if query.get("country"):
+        payload["country"] = str(query["country"])
+    return payload
 
 
 def _safe_result(item: Any, rank: int) -> dict[str, Any]:
@@ -88,7 +90,7 @@ def evaluate_queries(
             record: dict[str, Any] = {
                 "query_id": str(query["id"]),
                 "query": str(query["query"]),
-                "country_boost": str(query["country"]),
+                "country_boost": str(query["country"]) if query.get("country") else None,
                 "reference_urls": list(query.get("reference_urls", [])),
                 "request_parameters": {
                     "search_depth": SEARCH_DEPTH,
@@ -176,12 +178,12 @@ def load_query_fixture(path: str) -> list[dict[str, Any]]:
         value = json.load(stream)
     if not isinstance(value, list) or not value:
         raise ValueError("Search evaluation fixture must be a non-empty JSON list.")
-    required = {"id", "country", "query", "reference_urls"}
+    required = {"id", "query", "reference_urls"}
     for item in value:
         if not isinstance(item, dict) or not required.issubset(item):
             raise ValueError("Each query fixture must include id, country, query and reference_urls.")
-        if not str(item["query"]).strip() or not str(item["country"]).strip():
-            raise ValueError("Query and country must not be empty.")
+        if not str(item["query"]).strip() or (item.get("country") is not None and not str(item["country"]).strip()):
+            raise ValueError("Query must not be empty and country must be non-empty when supplied.")
         if not isinstance(item["reference_urls"], list):
             raise ValueError("reference_urls must be a list.")
     return value
