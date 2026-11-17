@@ -1,5 +1,6 @@
 import asyncio
 import hmac
+import logging
 import os
 import time
 import uuid
@@ -13,6 +14,8 @@ from pydantic import BaseModel, Field
 
 from app.rag import retrieve_answer
 from app.source_content import get_sources_status, refresh_loop, refresh_sources
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="PNG Public Services Assistant API",
@@ -81,7 +84,7 @@ async def start_source_refresh() -> None:
         await refresh_sources()
     except Exception:
         # A source outage must never prevent the API from starting.
-        pass
+        logger.exception("Initial source refresh failed; starting API with the available cache.")
     app.state.source_refresh_task = asyncio.create_task(refresh_loop())
 
 
