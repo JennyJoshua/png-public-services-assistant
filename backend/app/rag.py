@@ -363,13 +363,14 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
     citations: list[dict] = []
     citation_indexes: dict[str, int] = {}
     evidence: list[dict] = []
+    documents_by_url = {document.canonical_url: document for document in fetched_documents}
     for passage in evidence_records:
         source = passage.source
         url = source.url
         if url not in citation_indexes:
             citation_indexes[url] = len(citations) + 1
             citations.append({
-                "title": source.title,
+                "title": documents_by_url[url].title,
                 "institution": source.institution,
                 "url": url,
                 "publication_date": passage.publication_date,
