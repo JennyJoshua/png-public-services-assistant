@@ -170,3 +170,9 @@ def test_refresh_failure_preserves_last_good_in_memory_copy(monkeypatch):
     assert status["fetch_succeeded"] is False
     assert status["last_success_at"] == old_page["last_checked_at"]
     assert status["error"] == "HTTP 503"
+
+ 
+def test_html_extraction_rejects_javascript_only_application_shell():
+    html = b"<html><body><main>You need to enable JavaScript to run this app.</main></body></html>"
+    text, _ = _extract_html(html)
+    assert text == ""
