@@ -5,7 +5,7 @@ https://ica.gov.pg/passport/application-forms | ICA | Passport forms
 https://ica.gov.pg/visa-information/migration-service-fees | ICA | Visa and migration fees
 
 # BIRTH CERTIFICATE, NATIONAL ID (PNGCIR)
-https://pngcir.gov.pg/nid-registration-information | PNGCIR | NID registration procedure and witness rules
+https://pngcir.gov.pg/nid-registration-information | PNGCIR | Online birth and NID registration, witness rules
 https://www.pngcir.gov.pg | PNGCIR | About the registry, contacts
 
 # POLICE CLEARANCE (RPNGC)
