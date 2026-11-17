@@ -66,3 +66,23 @@ Add an institution only after verifying its official URL and relevance. Prioriti
 - Improve retrieval relevance and add source-quality/freshness checks.
 - Expand approved URLs only through a separately reviewed source update.
 - Consider persistent indexing only after database/storage and retention decisions.
+
+
+## Enforced source lifecycle
+
+Source records begin in `pending_review`. A successful HTTP fetch or index build does not promote a source to trusted or active status.
+
+The application-level lifecycle permits only these transitions:
+
+| Current status | Permitted next status |
+|---|---|
+| `pending_review` | `active`, `broken` |
+| `active` | `pending_review`, `broken`, `superseded` |
+| `broken` | `pending_review` |
+| `superseded` | `pending_review` |
+
+Moving a source to `active` requires an explicit review timestamp. A broken or superseded source must return to `pending_review` before it can be activated again. Invalid status labels and invalid transitions are rejected at runtime. Source records remain immutable; a transition creates a new record.
+
+An `active` status records that a source has passed the project's review process. It does not, by itself, establish that every statement on the page is legally authoritative, current, complete or suitable for every question. Evidence classification and claim-level verification remain separate controls.
+
+The current 15 registry entries remain `pending_review` because the metadata needed to certify their individual authority, document type, jurisdiction, language, dates and review history has not yet been populated. This is intentional. The offline audit builder may inspect registered URLs for diagnostics, but its output must not be treated as an approved production knowledge index merely because pages were fetched successfully.
