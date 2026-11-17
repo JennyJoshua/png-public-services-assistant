@@ -217,7 +217,7 @@ def test_fetched_document_requires_canonical_url_to_match_source():
 
 def test_fetched_document_rejects_cross_host_final_url():
     source = make_source()
-    with pytest.raises(RetrievalContractError, match="source host"):
+    with pytest.raises(RetrievalContractError, match="canonical host"):
         FetchedDocument(
             source=source,
             canonical_url=SOURCE_URL,
