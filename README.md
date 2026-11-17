@@ -4,17 +4,20 @@ A mobile-first assistant designed to help people in Papua New Guinea find trustw
 
 ## Controlling technical baseline
 
-The project-owner-approved **Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0** is the controlling technical baseline for implementation.
+The project-owner-approved **Simplified Hybrid RAG Architecture and Delivery Plan v1.1** is the active technical baseline. It was approved and merged through PR #41. The earlier Bounded Adaptive RAG v1.0 documents are retained as historical design and implementation records; they no longer control new implementation decisions where v1.1 differs.
 
-- [Technical Architecture and Interface Specification v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_TECHNICAL_SPEC.md)
-- [Bounded Adaptive RAG Architecture Decision and Delivery Roadmap](docs/architecture/BOUNDED_ADAPTIVE_RAG_DECISION.md)
-- [Bounded Adaptive RAG Implementation Backlog v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md)
+- [Simplified Hybrid RAG Architecture and Delivery Plan v1.1](docs/architecture/SIMPLIFIED_HYBRID_RAG_ARCHITECTURE_V1.1.md)
+- [Historical Bounded Adaptive RAG Technical Specification v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_TECHNICAL_SPEC.md)
+- [Historical Bounded Adaptive RAG Decision and Roadmap](docs/architecture/BOUNDED_ADAPTIVE_RAG_DECISION.md)
+- [Historical Bounded Adaptive RAG Implementation Backlog v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md)
+- [Source Policy](docs/architecture/RAG_SOURCE_POLICY.md)
+- [Hybrid Model Policy](docs/architecture/HYBRID_MODEL_POLICY.md)
 
-Implementation proposals and pull requests must be reconciled against these documents. Proposed implementation choices do not override the approved baseline unless the project owner explicitly approves a material change.
+New implementation proposals must follow v1.1, the source policy, and the active GitHub batch issues. Historical v1.0 work remains useful where compatible and is not to be deleted merely because the architecture evolved.
 
 ## Engineering delivery standard
 
-The owner-adopted [Joshua AI Software Delivery System (JASDS) v1.0](docs/engineering/AI_ASSISTED_CONTINUOUS_DELIVERY.md) defines the portfolio delivery standard currently being piloted in this repository. It governs workflow and quality practices only; it does not change the approved RAG architecture, backlog or project-owner approval gates.
+The owner-adopted [Joshua AI Software Delivery System (JASDS) v1.0](docs/engineering/AI_ASSISTED_CONTINUOUS_DELIVERY.md) defines the portfolio delivery standard being piloted in this repository. It governs workflow and quality practices; it does not override the RAG architecture or project-owner approval gates.
 
 ## Product direction
 
@@ -29,58 +32,56 @@ The application provides a conversational interface for:
 - Mobile-first, including practical use on Android devices.
 - No forced registration just to ask a public information question.
 - Free/open-source-first, with no mandatory paid AI API dependency.
-- Replaceable AI, retrieval, OCR, and storage providers.
-- Clear distinction between verified facts, general guidance, and unknown information.
+- Replaceable AI and retrieval providers.
+- Clear distinction between verified official facts, recognised institutional evidence, general web guidance, and unknown information.
 - Privacy and security by design; private uploads are not public knowledge sources.
 - Users review and approve generated documents. The assistant does not submit forms, sign, certify, or make declarations on a user's behalf.
-- Approved exact-URL sources only; no unrestricted crawling or arbitrary user-supplied source URLs.
-- No model training or fine-tuning, and no persistent conversation history.
+- Search approved sources first; use bounded general-web discovery only when approved evidence is absent, weak, stale, or incomplete.
+- No unrestricted crawling, arbitrary user-supplied source URLs, model training/fine-tuning, or persistent conversation history.
+- Treat retrieved content as untrusted input, including content from official domains.
 - Do not assume Render's local filesystem is durable.
 - Do not claim retrieval or answer-quality improvements without evaluation evidence.
 
 ## Current implementation
 
-The repository contains a Next.js/TypeScript frontend and a Python/FastAPI backend. The current live retrieval implementation still follows the earlier page-fetch-and-rank path; it has **not yet been connected to the versioned index artifact** required by the approved architecture.
+The repository contains a Next.js/TypeScript frontend and a Python/FastAPI backend. The live retrieval path currently fetches and ranks the curated exact-URL source registry. General web discovery and the full v1.1 hybrid retrieval flow are not yet complete.
 
-The approved-source ingestion and versioned-index foundations have been added:
-- General lexical retrieval, vocabulary aliases, context expansion, and improved preservation of headings, lists, and table labels.
+The repository also contains supporting foundations from the earlier v1.0 work:
+- General lexical retrieval, vocabulary aliases, context expansion, and structure-aware extraction.
 - A strict versioned index-artifact schema and loader.
 - An offline builder restricted to exact URLs in the curated source registry.
 - A manually triggered, ephemeral GitHub Actions audit that validates an index artifact and removes generated source content after the run.
 
-The latest controlled audit indexed 4 of 15 registered pages and produced 163 passages. This is a partial technical result, not proof of full source coverage, source authority, legal reuse permission, answer quality, or production index integration. See [the audit run](https://github.com/JennyJoshua/png-public-services-assistant/actions/runs/43690260410).
+The latest recorded controlled audit indexed 4 of 15 registered pages and produced 163 passages. This is a partial technical result, not proof of full source coverage, source authority, legal reuse permission, answer quality, or production index integration. See [the audit run](https://github.com/JennyJoshua/png-public-services-assistant/actions/runs/43690260410).
 
 ## Delivery status
 
-Implementation is governed by the seven batches in the approved [Implementation Backlog v1.0](docs/architecture/BOUNDED_ADAPTIVE_RAG_IMPLEMENTATION_BACKLOG.md). Its detailed work items and acceptance criteria are authoritative.
+The active v1.1 delivery work is tracked in GitHub Issues:
+- [Batch 0 — Reconcile baseline, source policy and search-provider feasibility](https://github.com/JennyJoshua/png-public-services-assistant/issues/15)
+- [Batch 1 — General retrieval foundation](https://github.com/JennyJoshua/png-public-services-assistant/issues/16)
+- [Batch 2 — Governed web discovery and optional knowledge ingestion](https://github.com/JennyJoshua/png-public-services-assistant/issues/17)
+- [Batch 3 — Retrieval planning and evidence sufficiency](https://github.com/JennyJoshua/png-public-services-assistant/issues/18)
+- [Batch 4 — Evidence verification and safe answers](https://github.com/JennyJoshua/png-public-services-assistant/issues/19)
+- [Batch 5 — Operational reliability, privacy and security](https://github.com/JennyJoshua/png-public-services-assistant/issues/20)
+- [Batch 6 — Evaluation and release readiness](https://github.com/JennyJoshua/png-public-services-assistant/issues/21)
 
-Recent merged implementation PRs:
-- PR #23 — general-purpose retrieval foundation.
-- PR #24 — strict versioned index-artifact foundation.
-- PR #25 — representative approved-source index builder.
-- PR #26 — controlled ephemeral source-index audit workflow.
-- PR #27 — source-index audit CLI import-path correction.
+Recent merged implementation PRs include PRs #23–#27 (general retrieval and index foundations), PR #41 (v1.1 architecture approval), and PR #51 (safe model-provider failure diagnostics). The v1.0 index foundations remain optional supporting capabilities; production index integration is not a prerequisite for the v1.1 web-first design.
 
-Important outstanding work includes completing Render artifact-delivery validation, establishing the reviewed retrieval evaluation set, enriching governed source metadata, integrating the versioned index into online retrieval, implementing source-change monitoring, and completing Batches 3–6.
-
-Passing CI or a successful artifact audit does not constitute release readiness or deployment approval.
+Passing CI or a successful artifact audit does not constitute release readiness or production deployment approval.
 
 ## Hosting and provider constraints
 
-The existing hosting direction is Render, with the current free-service constraints respected. Free-service filesystem changes are ephemeral; the authoritative index must not depend on mutable runtime files or an assumed persistent disk. The approved architecture requires measured startup, memory, packaging, replacement, and rollback validation before relying on deployed index artifacts.
-
-**Approved pilot AI-provider constraint:** retain the existing free Groq-hosted LLM arrangement. Keep Groq credentials server-side, verify the configured model's availability and rate limits, and handle provider failures safely. Do not introduce a paid OpenAI API dependency, paid Groq tier, paid fallback provider, or other recurring AI cost without explicit owner approval. The exact configured model identifier must be confirmed from non-secret configuration before it is documented as fact. No paid plan or service is authorised by this README.
+Retain the existing Render services and free Groq-hosted LLM arrangement. Keep credentials server-side. Search-provider selection must be evidence-backed for free-tier availability, terms, quotas, reliability, latency, privacy, downstream page-fetch permissions, and PNG/Pacific result quality. If no suitable compliant free search provider is established, remain in approved-source-only mode and document the limitation. Do not introduce paid search, scraping, model, fallback provider, Groq tier, or infrastructure without explicit owner approval. Never silently switch providers or models.
 
 ## Approval gates
 
 Explicit project-owner approval is required before:
-- Merging implementation pull requests.
-- Production deployments or production behaviour/configuration changes.
-- Paid services or upgrades.
+- Production deployments or production-impacting hosting/configuration changes.
+- Paid services, upgrades, or new recurring costs.
 - Destructive actions or database migrations.
 - Material scope or architecture changes.
 
-Technical investigation, documentation, and implementation may proceed within the approved baseline and existing permissions, but every implementation PR must be reviewed before merge.
+Implementation PRs may proceed within the approved v1.1 scope and delivery workflow. Merge only when the owner has authorised the merge under the current project workflow. CI success is necessary but does not by itself authorise production deployment.
 
 ## Document generation
 
