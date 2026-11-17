@@ -122,3 +122,12 @@ def test_ranked_passage_without_matching_fetched_document_fails_closed():
             "text": "Unregistered content",
             "passage_index": 0,
         }])
+
+
+def test_page_publication_date_is_kept_as_document_metadata_only():
+    document = page_to_fetched_document(
+        page(publication_date="2024-06-15")
+    )
+    assert document.publication_date == "2024-06-15"
+    assert document.source.publication_date is None
+    assert document.source.last_reviewed_at is None
