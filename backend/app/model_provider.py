@@ -1,10 +1,13 @@
 """OpenAI-compatible chat-model adapter; Groq is the initial provider."""
+import logging
 import os
 from pathlib import Path
 
 import httpx
 
 from app.system_prompt import SYSTEM_PROMPT
+
+logger = logging.getLogger(__name__)
 
 MAX_HISTORY_MESSAGES = 8
 MAX_EVIDENCE_CHARS = 7000
@@ -105,13 +108,26 @@ async def generate_answer(
             )
             response.raise_for_status()
             data = response.json()
-    except (httpx.HTTPError, ValueError) as exc:
-        raise ModelProviderError("The configured model provider did not return a valid response.") from exc
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        logger.error("Model provider rejected the request (HTTP %s).", status)
+        raise ModelProviderError(f"The model provider returned HTTP {status}.") from exc
+    except httpx.TimeoutException as exc:
+        logger.error("Model provider request timed out (%s).", type(exc).__name__)
+        raise ModelProviderError("The model provider request timed out.") from exc
+    except httpx.HTTPError as exc:
+        logger.error("Model provider transport failed (%s).", type(exc).__name__)
+        raise ModelProviderError("The model provider network request failed.") from exc
+    except ValueError as exc:
+        logger.error("Model provider returned invalid JSON.")
+        raise ModelProviderError("The model provider returned invalid JSON.") from exc
 
     try:
         answer = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
+        logger.error("Model provider response had an unexpected structure.")
         raise ModelProviderError("The model provider response had an unexpected format.") from exc
     if not isinstance(answer, str) or not answer.strip():
+        logger.warning("Model provider returned empty answer content.")
         raise ModelProviderError("The model provider returned an empty answer.")
     return answer.strip()[:MAX_ANSWER_CHARS]
