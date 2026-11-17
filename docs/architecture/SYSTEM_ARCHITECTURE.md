@@ -72,7 +72,7 @@ scripts/
 ```
 
 ## 7. Deployment direction
-Candidate split: frontend on a static/web host, API on an application host, PostgreSQL and private file storage on a managed or self-hosted service. Netlify, Render, and Supabase are candidates only. Validate current free-tier limits, sleep/cold-start behavior, storage, bandwidth, build limits, data region, backup, and acceptable-use terms before choosing. Free hosting is not assumed to support local model inference or OCR workloads.
+Current deployment: the Next.js frontend and FastAPI backend run as separate Render web services. The prototype uses Render's free tier; free services can sleep and have cold starts, and the backend filesystem is ephemeral unless a separately approved persistent-storage arrangement is adopted. Supabase is not assumed to be an active database dependency. Validate current service limits, storage, bandwidth, build limits, data region, backup, and acceptable-use terms before expanding usage. Free hosting is not assumed to support local model inference or OCR workloads.
 
 ## 8. Operational concerns
 - Health/readiness endpoints and structured logs.
