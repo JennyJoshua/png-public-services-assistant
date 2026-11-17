@@ -8,9 +8,10 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from app.model_provider import ModelProviderError, generate_answer, model_is_configured
+from app.model_provider import ModelProviderError, build_system_prompt, generate_answer, model_is_configured
 from app.retrieval_pipeline import build_evidence_records, page_to_fetched_document
 from app.source_registry import SOURCES
+from app.source_content import assemble_sources_block, get_source_pages
 
 MAX_PAGE_BYTES = 1_500_000
 MAX_TEXT_CHARS = 24_000
@@ -349,15 +350,18 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
 
 
 async def retrieve_answer(question: str, history: list[dict] | None = None) -> dict:
-    """Fetch approved evidence, then optionally ask a model to compose the response."""
-    timeout = httpx.Timeout(7.0, connect=4.0)
-    headers = {"User-Agent": "PNGPublicServicesAssistant/0.3", "Accept": "text/html"}
-    async with httpx.AsyncClient(timeout=timeout, headers=headers, follow_redirects=True) as client:
-        pages = await asyncio.gather(*(_fetch_source(client, source) for source in SOURCES))
-
-    available_pages = [page for page in pages if page]
-    fetched_documents = [page_to_fetched_document(page) for page in available_pages]
+    """Use cached configured source pages, BM25 selection and the owner's prompt."""
+    available_pages = await get_source_pages()
     passages = _rank_passages(question, available_pages)
+    selected_urls: list[str] = []
+    for passage in passages:
+        url = str(passage["source"]["url"])
+        if url not in selected_urls:
+            selected_urls.append(url)
+
+    sources_text = assemble_sources_block(available_pages, selected_urls)
+    system_prompt = build_system_prompt(sources_text)
+    fetched_documents = [page_to_fetched_document(page) for page in available_pages]
     evidence_records = build_evidence_records(fetched_documents, passages)
 
     citations: list[dict] = []
@@ -380,7 +384,9 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
 
     warnings: list[str] = []
     try:
-        answer = await generate_answer(question, evidence, history or [])
+        answer = await generate_answer(
+            question, evidence, history or [], system_prompt=system_prompt
+        )
     except ModelProviderError:
         answer = None
         warnings.append(
@@ -398,9 +404,8 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
 
     if not evidence_records:
         fallback = (
-            "I could not find a sufficiently relevant passage in the currently approved sources. "
-            "I won't guess at official requirements. Please check the responsible agency's website "
-            "or contact its office."
+            "I don't have confirmed information on that. Please contact the agency "
+            "responsible for this service to confirm the current requirements."
         )
     else:
         answer_lines = [
