@@ -43,7 +43,7 @@ def test_adapter_preserves_registry_status_and_unknown_governance_metadata():
     assert source.effective_date is None
     assert source.last_reviewed_at is None
     assert source.institution == "PNGCIR"
-    assert source.title == "NID registration procedure and witness rules"
+    assert source.title == "Online birth and NID registration, witness rules"
     assert source.last_fetched_at == datetime(
         2026, 11, 16, 7, 0, tzinfo=timezone.utc
     )
