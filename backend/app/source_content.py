@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
@@ -12,6 +13,8 @@ from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 from app.source_registry import SOURCES
+
+logger = logging.getLogger(__name__)
 
 REFRESH_SECONDS = 24 * 60 * 60
 MAX_DOWNLOAD_BYTES = 5_000_000
@@ -31,6 +34,7 @@ _STATUS: dict[str, dict] = {
         "last_success_at": None,
         "http_status": None,
         "final_url": None,
+        "fetch_succeeded": False,
         "usable_text": False,
         "text_chars": 0,
         "cached": False,
@@ -113,6 +117,7 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
         status["final_url"] = str(response.url)
         if response.status_code != 200:
             raise ValueError(f"HTTP {response.status_code}")
+        status["fetch_succeeded"] = True
         if not _redirect_is_allowed(source.url, str(response.url)):
             raise ValueError("Redirect destination is outside the approved HTTPS government domain")
         if len(response.content) > MAX_DOWNLOAD_BYTES:
@@ -142,6 +147,7 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
         }
         status.update({
             "last_success_at": fetched_at,
+            "fetch_succeeded": True,
             "usable_text": True,
             "text_chars": len(text),
             "cached": True,
@@ -155,6 +161,7 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
             "cached": source.url in _CACHE,
             "error": str(exc)[:240],
         })
+        logger.warning("Source fetch failed for %s: %s", source.url, exc)
         return None, status
 
 
@@ -191,9 +198,8 @@ async def get_source_pages() -> list[dict]:
 async def refresh_loop() -> None:
     """Best-effort periodic refresh; startup refresh also runs after Render wake-up."""
     while True:
-        await asyncio.sleep(60 * 60)
-        if _LAST_REFRESH is None or datetime.now(timezone.utc) - _LAST_REFRESH >= timedelta(seconds=REFRESH_SECONDS):
-            await refresh_sources(force=False)
+        await asyncio.sleep(REFRESH_SECONDS)
+        await refresh_sources(force=True)
 
 
 def get_sources_status() -> dict:
