@@ -205,10 +205,13 @@ async def refresh_sources(*, force: bool = True) -> dict:
 
 
 async def get_source_pages() -> list[dict]:
-    if _LAST_REFRESH is None:
-        await refresh_sources()
-    elif datetime.now(timezone.utc) - _LAST_REFRESH >= timedelta(seconds=REFRESH_SECONDS):
-        await refresh_sources(force=False)
+    try:
+        if _LAST_REFRESH is None:
+            await refresh_sources()
+        elif datetime.now(timezone.utc) - _LAST_REFRESH >= timedelta(seconds=REFRESH_SECONDS):
+            await refresh_sources(force=False)
+    except Exception:
+        logger.exception("Source refresh failed; continuing with the last good in-memory cache.")
     return list(_CACHE.values())
 
 
@@ -216,7 +219,10 @@ async def refresh_loop() -> None:
     """Best-effort periodic refresh; startup refresh also runs after Render wake-up."""
     while True:
         await asyncio.sleep(REFRESH_SECONDS)
-        await refresh_sources(force=True)
+        try:
+            await refresh_sources(force=True)
+        except Exception:
+            logger.exception("Scheduled source refresh failed; service remains available.")
 
 
 def get_sources_status() -> dict:
