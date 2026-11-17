@@ -2,8 +2,8 @@
 
 **Project:** PNG Public Services Assistant (pilot implementation)  
 **Reusable capability:** Joshua shared RAG engine  
-**Status:** Proposed successor architecture — owner-approved direction; document pending review and merge  
-**Supersedes:** Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0, only after v1.1 is reviewed, accepted and merged  
+**Status:** Active owner-approved architecture; adopted and merged through PR #41  
+**Supersedes:** Bounded Adaptive RAG Technical Architecture and Interface Specification v1.0 for new implementation decisions; historical v1.0 work remains retained where compatible  
 **Storage baseline:** GitHub is the only permanent application knowledge/artifact store initially  
 **Runtime baseline:** Existing Render services  
 **LLM baseline:** Existing free Groq-hosted model configuration; no paid provider or silent provider/model fallback
@@ -22,15 +22,14 @@ This is still a RAG system: retrieved external or stored evidence is supplied to
 
 ### 1.1 Decision status and transition rule
 
-The owner's approval of Option B authorizes preparation of this successor architecture and delivery plan. It does not, by itself, authorize:
-- merging this document;
-- production code changes or deployment;
+The owner approved Option B and this architecture was merged through PR #41. That approval does not, by itself, authorize:
+- production deployment;
 - a paid search provider, paid scraping service, paid model or paid infrastructure;
 - changing the current Groq provider/model configuration;
 - changing production source policy or treating arbitrary web content as authoritative;
 - destructive changes to existing issues, branches, pull requests or artifacts.
 
-Until this document is reviewed and merged, v1.0 remains the formally approved technical baseline. No implementation batch should silently reinterpret v1.0 as superseded.
+This document was reviewed and merged through PR #41 and is the controlling technical baseline. Historical v1.0 records remain available for traceability; where they conflict, v1.1 controls.
 
 ### 1.2 Core principles
 
@@ -424,7 +423,7 @@ Excluded unless separately approved:
 ## 11. Approval gates
 
 The following require explicit owner approval under the project's operating rules:
-- merging this successor architecture and any implementation PR;
+- merging implementation PRs where the current workflow requires a separate approval;
 - material changes to source trust policy or project scope;
 - selection of a paid provider/service or any recurring cost;
 - changing the configured LLM provider/model;
@@ -436,10 +435,10 @@ Routine implementation and tests may proceed within an approved batch and scope,
 
 ---
 
-## 12. Final architectural decision requested
+## 12. Adopted architectural decision
 
-The proposed successor direction is:
+The adopted direction is:
 
 **A reusable, web-first Simplified Hybrid RAG engine with approved-source priority, general internet discovery when approved evidence is insufficient, bounded webpage extraction, explicit evidence and citation verification, optional GitHub-stored indexing, existing Render hosting and the existing free Groq inference arrangement.**
 
-This v1.1 document becomes the active architecture only after owner review and merge. Until then, v1.0 remains the approved baseline.
+This v1.1 document is the active owner-approved architecture, merged through PR #41. Historical v1.0 documents remain retained for traceability.

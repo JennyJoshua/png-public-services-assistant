@@ -86,3 +86,14 @@ Moving a source to `active` requires an explicit review timestamp. A broken or s
 An `active` status records that a source has passed the project's review process. It does not, by itself, establish that every statement on the page is legally authoritative, current, complete or suitable for every question. Evidence classification and claim-level verification remain separate controls.
 
 The current 15 registry entries remain `pending_review` because the metadata needed to certify their individual authority, document type, jurisdiction, language, dates and review history has not yet been populated. This is intentional. The offline audit builder may inspect registered URLs for diagnostics, but its output must not be treated as an approved production knowledge index merely because pages were fetched successfully.
+
+
+---
+
+## v1.1 source-classification and governance addendum
+
+The controlling source-classification rules are now defined in [RAG Source Classification and Evidence Governance Policy](RAG_SOURCE_CLASSIFICATION_POLICY.md). The exact source registry is a curated fetch allowlist; it is not proof that every page has passed authority, freshness, copyright/terms or subject-remit review.
+
+The four source classes (A approved authoritative, B recognised institutional, C general web, D unverified/unsafe) are independent of lifecycle status (pending_review, active, broken, superseded). A successful fetch or a government domain does not automatically confer Class A or active status.
+
+**Current implementation limitation:** the live retrieval path does not yet enforce complete source-class/status-aware evidence filtering or display these fields in every citation. Until that is implemented and tested, registry excerpts must not be described as universally verified official guidance. Preserve the current allowlist and behaviour while a separate implementation batch adds the missing enforcement.
