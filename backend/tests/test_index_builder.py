@@ -88,7 +88,7 @@ def test_fetch_one_does_not_fetch_when_robots_disallows_seed_url():
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal page_requested
         if request.url.path == "/robots.txt":
-            return httpx.Response(200, text="User-agent: *\nDisallow: /home/", request=request)
+            return httpx.Response(200, text="User-agent: *\nDisallow: /passport/", request=request)
         page_requested = True
         return httpx.Response(200, text="<html><body>Should not fetch</body></html>", request=request)
 

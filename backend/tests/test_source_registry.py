@@ -13,7 +13,7 @@ from app.source_registry import (
 
 def test_registry_has_unique_exact_https_seed_urls():
     urls = [source.url for source in SOURCES]
-    assert len(urls) == 15
+    assert len(urls) == 18
     assert len(urls) == len(set(urls))
     assert all(urlparse(url).scheme == "https" for url in urls)
 

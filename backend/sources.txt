@@ -1,0 +1,35 @@
+# PASSPORTS, VISAS, CITIZENSHIP (ICA)
+https://ica.gov.pg/passport/applying-for-a-png-passport | ICA | How to apply for a PNG passport
+https://ica.gov.pg/faq/passport | ICA | Passport FAQ
+https://ica.gov.pg/passport/application-forms | ICA | Passport forms
+https://ica.gov.pg/visa-information/migration-service-fees | ICA | Visa and migration fees
+
+# BIRTH CERTIFICATE, NATIONAL ID (PNGCIR)
+https://pngcir.gov.pg/nid-registration-information | PNGCIR | Online birth and NID registration, witness rules
+https://www.pngcir.gov.pg | PNGCIR | About the registry, contacts
+
+# POLICE CLEARANCE (RPNGC)
+https://rpngc.gov.pg/advice-services/epolice-clearance | RPNGC | Online police clearance steps
+https://www.rpngc.gov.pg/?p=251 | RPNGC | Types of clearance and requirements
+
+# DRIVER LICENCE (RTA)
+https://rta.gov.pg/licences-approvals/driver-licensing/ | RTA | Driver licensing rules
+
+# BUSINESS REGISTRATION (IPA)
+https://www.ipa.gov.pg/public/prescribedforms.aspx | IPA | Forms and searches
+https://www.ipa.gov.pg/Documentation/PG/PublicNotices/TransitionalUpdateOnIPANewOnlineRegistrySystem.pdf | IPA | New online registry (Dec 2022)
+
+# TAX NUMBER (IRC)
+https://irc.gov.pg/pages/know-your-taxes/tin-registration | IRC | TIN registration (VERIFY it loads)
+https://irc.gov.pg/tax-forms/ | IRC | Tax forms (VERIFY it loads)
+https://static.irc.gov.pg/2021/December/E6wskE-media-IRC-TIN4I-Registration.pdf | IRC | Small business TIN form
+
+# SCHOOL FEES (Education)
+https://www.education.gov.pg/admin/images/products/03_02_26%20_N_MPS_on%20GFEP_202695.pdf | Education | 2026 Free Education Policy
+https://education.gov.pg/Government-Tuition-Fee-Subsidy-Report/ | Education | Fee policy and limits
+
+# IMPORT/EXPORT TIN (Customs, optional)
+https://customs.gov.pg/ict/tin_reg | Customs | Importer/exporter registration
+
+# ONLINE GOVERNMENT PORTAL (optional)
+https://www.ict.gov.pg/a-digital-leap-for-png-dict-secretary-explains-progress-in-digital-government-journey/ | DICT | e-Government portal progress

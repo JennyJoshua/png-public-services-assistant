@@ -70,13 +70,10 @@ def test_rank_passages_returns_empty_when_no_query_overlap() -> None:
 
 
 def test_pngcir_is_an_explicit_curated_source_set() -> None:
-    pngcir_urls = {source.url for source in SOURCES if source.institution == "Papua New Guinea Civil and Identity Registry"}
+    pngcir_urls = {source.url for source in SOURCES if source.institution == "PNGCIR"}
     assert pngcir_urls == {
-        "https://pngcir.gov.pg/",
-        "https://pngcir.gov.pg/nid-registration-information/",
-        "https://pngcir.gov.pg/downloads/",
-        "https://pngcir.gov.pg/png-civil-identity-registry-fees/",
-        "https://pngcir.gov.pg/contact/",
+        "https://pngcir.gov.pg/nid-registration-information",
+        "https://www.pngcir.gov.pg",
     }
 
 
@@ -171,12 +168,10 @@ def test_identity_card_wording_matches_registered_vocabulary_aliases() -> None:
 
 
 def test_ipa_business_registration_sources_are_curated() -> None:
-    ipa_urls = {source.url for source in SOURCES if source.institution == "Investment Promotion Authority"}
+    ipa_urls = {source.url for source in SOURCES if source.institution == "IPA"}
     assert ipa_urls == {
-        "https://www.ipa.gov.pg/public/help.aspx?cn=BusinessRegulations",
-        "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo",
-        "https://www.ipa.gov.pg/public/prescribedforms.aspx?lang=en-US",
-        "https://www.ipa.gov.pg/public/help.aspx?cn=FormsForDownload",
+        "https://www.ipa.gov.pg/public/prescribedforms.aspx",
+        "https://www.ipa.gov.pg/Documentation/PG/PublicNotices/TransitionalUpdateOnIPANewOnlineRegistrySystem.pdf",
     }
 
 

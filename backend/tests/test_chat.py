@@ -53,3 +53,50 @@ def test_chat_rejects_invalid_questions_and_history() -> None:
         "question": "Hello there",
         "history": [{"role": "user", "content": "hello"}] * 9,
     }).status_code == 422
+
+
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+client = TestClient(app)
+
+
+def test_sources_status_requires_configured_bearer_token(monkeypatch) -> None:
+    monkeypatch.delenv("SOURCES_STATUS_TOKEN", raising=False)
+    assert client.get("/sources-status").status_code == 503
+
+    monkeypatch.setenv("SOURCES_STATUS_TOKEN", "test-admin-token")
+    assert client.get("/sources-status").status_code == 401
+    response = client.get(
+        "/sources-status",
+        headers={"Authorization": "Bearer test-admin-token"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["cache_storage"] == "memory_only"
+    assert payload["refresh_interval_hours"] == 24
+    assert len(payload["sources"]) == 18
+
+
+def test_chat_rate_limit_is_per_ip_and_returns_retry_after(monkeypatch) -> None:
+    async def fake_retrieve_answer(question: str, history: list[dict]) -> dict:
+        return {
+            "answer": "Test answer",
+            "answer_mode": "model",
+            "citations": [],
+            "evidence": [],
+            "warnings": [],
+        }
+
+    from app import main as main_module
+
+    main_module._rate_buckets.clear()
+    monkeypatch.setattr("app.main.retrieve_answer", fake_retrieve_answer)
+    for _ in range(main_module.RATE_LIMIT_REQUESTS):
+        response = client.post("/api/v1/chat", json={"question": "Test question"})
+        assert response.status_code == 200
+    limited = client.post("/api/v1/chat", json={"question": "Test question"})
+    assert limited.status_code == 429
+    assert limited.headers["retry-after"] == "60"
+    main_module._rate_buckets.clear()

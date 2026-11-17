@@ -1,21 +1,11 @@
-"""Curated public PNG sources approved for the first RAG pilot.
-
-Only these exact HTTPS seed URLs are fetched. This module intentionally does not
-crawl arbitrary links or accept user-supplied URLs.
-
-Governance metadata is deliberately nullable: unknown authority, document, language,
-publication, review, fetch and content-integrity facts must not be guessed. Newly
-registered sources remain pending review until those facts have been assessed.
-"""
+"""Configured official-source list for the simplified Phase 1 fetcher."""
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Literal
-
+from urllib.parse import urlparse
 
 SourceStatus = Literal["active", "superseded", "broken", "pending_review"]
 VALID_SOURCE_STATUSES = frozenset({"active", "superseded", "broken", "pending_review"})
-
-# Re-activation always passes through human review. A superseded source cannot
-# silently become active again, and a broken source must be reassessed first.
 ALLOWED_STATUS_TRANSITIONS: dict[str, frozenset[str]] = {
     "pending_review": frozenset({"active", "broken"}),
     "active": frozenset({"pending_review", "broken", "superseded"}),
@@ -48,11 +38,6 @@ class Source:
 def transition_source_status(
     source: Source, new_status: SourceStatus, *, reviewed_at: str | None = None
 ) -> Source:
-    """Return a new source record only when its lifecycle transition is permitted.
-
-    Moving a source to active requires an explicit human-review timestamp.
-    This records the review event; it does not itself certify source authority.
-    """
     if new_status not in VALID_SOURCE_STATUSES:
         raise ValueError(f"unsupported source status: {new_status!r}")
     if new_status == source.status:
@@ -68,20 +53,31 @@ def transition_source_status(
     return replace(source, status=new_status)
 
 
-SOURCES: tuple[Source, ...] = (
-    Source("PNG National Information Centre", "National Information Centre", "https://info.gov.pg/home/"),
-    Source("Department of Justice and Attorney General", "Department of Justice and Attorney General", "https://justice.gov.pg/"),
-    Source("Immigration and Citizenship Services Authority", "Immigration and Citizenship Services Authority", "https://icsa.gov.pg/"),
-    Source("Investment Promotion Authority", "Business Registration, Regulation and Certification", "https://www.ipa.gov.pg/public/help.aspx?cn=BusinessRegulations"),
-    Source("Investment Promotion Authority", "IPA — Business Name Registration and Company Incorporation Guide", "https://www.ipa.gov.pg/public/howto.aspx?cn=RegisterBusinessName&ctk=CompanyHowTo"),
-    Source("Investment Promotion Authority", "IPA — Prescribed Forms and Registration Fees", "https://www.ipa.gov.pg/public/prescribedforms.aspx?lang=en-US"),
-    Source("Investment Promotion Authority", "IPA — Registry Forms for Download", "https://www.ipa.gov.pg/public/help.aspx?cn=FormsForDownload"),
-    Source("Internal Revenue Commission", "Internal Revenue Commission", "https://irc.gov.pg/"),
-    Source("National and Supreme Courts of Papua New Guinea", "National and Supreme Courts of Papua New Guinea", "https://www.pngjudiciary.gov.pg/"),
-    Source("Land Commission of Papua New Guinea", "Land Commission of Papua New Guinea", "https://www.landcommission.gov.pg/"),
-    Source("Papua New Guinea Civil and Identity Registry", "PNGCIR — National Identity and Civil Registration", "https://pngcir.gov.pg/"),
-    Source("Papua New Guinea Civil and Identity Registry", "PNGCIR — NID Registration Information", "https://pngcir.gov.pg/nid-registration-information/"),
-    Source("Papua New Guinea Civil and Identity Registry", "PNGCIR — Registration Forms and Downloads", "https://pngcir.gov.pg/downloads/"),
-    Source("Papua New Guinea Civil and Identity Registry", "PNGCIR — Fees", "https://pngcir.gov.pg/png-civil-identity-registry-fees/"),
-    Source("Papua New Guinea Civil and Identity Registry", "PNGCIR — Contact", "https://pngcir.gov.pg/contact/"),
-)
+def load_sources(path: str | Path | None = None) -> tuple[Source, ...]:
+    """Load exact HTTPS source entries from sources.txt; comments and blanks are ignored."""
+    config_path = Path(path) if path else Path(__file__).resolve().parents[1] / "sources.txt"
+    if not config_path.is_file():
+        raise RuntimeError(f"Required source configuration is missing: {config_path}")
+    sources: list[Source] = []
+    seen: set[str] = set()
+    for line_number, raw_line in enumerate(config_path.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        if len(parts) != 3 or not all(parts):
+            raise ValueError(f"sources.txt line {line_number} must be URL | agency | topic")
+        url, agency, topic = parts
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
+            raise ValueError(f"sources.txt line {line_number} must contain a clean HTTPS URL")
+        if url in seen:
+            raise ValueError(f"sources.txt line {line_number} duplicates URL: {url}")
+        seen.add(url)
+        sources.append(Source(institution=agency, title=topic, url=url))
+    if not sources:
+        raise ValueError("sources.txt contains no source entries")
+    return tuple(sources)
+
+
+SOURCES: tuple[Source, ...] = load_sources()

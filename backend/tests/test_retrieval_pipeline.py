@@ -10,7 +10,7 @@ from app.retrieval_pipeline import build_evidence_records, page_to_fetched_docum
 
 
 NOW = "2026-11-16T07:00:00+00:00"
-URL = "https://pngcir.gov.pg/nid-registration-information/"
+URL = "https://pngcir.gov.pg/nid-registration-information"
 TEXT = "Applicants must lodge the completed form at the registry office."
 
 
@@ -42,8 +42,8 @@ def test_adapter_preserves_registry_status_and_unknown_governance_metadata():
     assert source.publication_date is None
     assert source.effective_date is None
     assert source.last_reviewed_at is None
-    assert source.institution == "Papua New Guinea Civil and Identity Registry"
-    assert source.title == "PNGCIR — NID Registration Information"
+    assert source.institution == "PNGCIR"
+    assert source.title == "Online birth and NID registration, witness rules"
     assert source.last_fetched_at == datetime(
         2026, 11, 16, 7, 0, tzinfo=timezone.utc
     )
