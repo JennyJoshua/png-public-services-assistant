@@ -148,7 +148,7 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
             "error": None,
         })
         return page, status
-    except (httpx.HTTPError, ValueError, UnicodeError, OSError) as exc:
+    except Exception as exc:
         status.update({
             "usable_text": False,
             "text_chars": 0,
