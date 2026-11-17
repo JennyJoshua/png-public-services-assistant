@@ -372,7 +372,7 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
                 "title": source.title,
                 "institution": source.institution,
                 "url": url,
-                "publication_date": source.publication_date,
+                "publication_date": passage.publication_date,
                 "last_checked_at": source.last_fetched_at.isoformat() if source.last_fetched_at else None,
             })
         evidence.append({"text": passage.text, "citation_index": citation_indexes[url]})
