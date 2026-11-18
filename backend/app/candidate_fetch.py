@@ -169,3 +169,37 @@ async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> di
             "error": str(exc)[:240],
         }
 
+
+
+def _extract_candidate_html(raw: bytes) -> tuple[str, str]:
+    soup = BeautifulSoup(raw, "html.parser")
+    title = soup.title.get_text(" ", strip=True) if soup.title else ""
+    for element in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript", "svg"]):
+        element.decompose()
+    main = soup.find("main") or soup.find("article") or soup.body or soup
+    blocks = []
+    for element in main.find_all(["h1", "h2", "h3", "h4", "p", "li", "blockquote", "dt", "dd"]):
+        text = " ".join(element.get_text(" ", strip=True).split())
+        if text and (not blocks or text != blocks[-1]):
+            blocks.append(text)
+        if sum(len(item) + 1 for item in blocks) >= MAX_TEXT_CHARS:
+            break
+    return "\\n".join(blocks)[:MAX_TEXT_CHARS], title
+
+
+async def fetch_candidate_pages(candidates: list[dict]) -> list[dict]:
+    """Fetch at most five candidates, two concurrently; failures remain inspectable."""
+    bounded = list(candidates[:MAX_CANDIDATES])
+    if not bounded:
+        return []
+    semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
+    async with httpx.AsyncClient(
+        timeout=REQUEST_TIMEOUT,
+        headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},
+        follow_redirects=False,
+        trust_env=False,
+    ) as client:
+        async def limited(candidate: dict) -> dict:
+            async with semaphore:
+                return await _fetch_one_candidate(client, candidate)
+        return await asyncio.gather(*(limited(item) for item in bounded))
