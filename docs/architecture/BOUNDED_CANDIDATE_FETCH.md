@@ -10,7 +10,8 @@
 - `robots.txt` is checked before page retrieval. A disallow rule, robots fetch failure, or ambiguous robots response blocks retrieval.
 - Only HTML/XHTML is accepted. The response is limited to 1 MB and extracted text to 12,000 characters.
 - Requests use bounded timeouts, a project user-agent and `trust_env=False`.
-- Extracted pages retain URL, final URL, domain, provider, rank and retrieval time.
+- Extracted pages retain a stable candidate ID, original/canonical/final URLs, final domain, provider, provider result ID, provider title/snippet, rank, publication date when supplied, retrieval time and content type. Missing or invalid optional provider metadata remains null rather than being inferred.
+- Candidate IDs are deterministic for the same provider and original URL; retrieval timestamps remain per-fetch.
 - Every result is labelled `candidate_unreviewed`, has no evidence class and has `approved=false`. It is not added to the configured source registry or trusted cache.
 
 ## Important security limitation
@@ -23,4 +24,4 @@ This helper does not crawl links, fetch PDFs, bypass logins/paywalls/anti-bot co
 
 ## Tests
 
-Mocked tests cover URL validation, public/private DNS results, HTML extraction, robots denial/failure, redirect rejection, unreviewed metadata and the five-candidate cap.
+Mocked tests cover URL validation, public/private DNS results, HTML extraction, robots denial/failure, redirect rejection, unreviewed metadata, stable provenance identity, invalid optional metadata and the five-candidate cap.

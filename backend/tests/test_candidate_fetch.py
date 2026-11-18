@@ -158,3 +158,73 @@ def test_candidate_count_is_capped_at_five(monkeypatch):
     result = asyncio.run(run())
     assert len(result) == 5
     assert len(seen) == 5
+
+
+def test_candidate_fetch_preserves_provider_provenance_and_stable_identity(monkeypatch):
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, request=request)
+        body = ("<html><head><title>Fetched page title</title></head><body><main>"
+                "<h1>Service guide</h1><p>" + ("Useful service information for applicants. " * 8)
+                + "</p></main></body></html>")
+        return httpx.Response(200, request=request, headers={"content-type": "text/html"}, text=body)
+
+    async def public_dns(host, port=443):
+        return None
+
+    monkeypatch.setattr(candidate_fetch, "_resolve_public_host", public_dns)
+
+    candidate = {
+        "url": "https://example.org/service",
+        "title": "Search provider title",
+        "snippet": "Provider supplied summary",
+        "provider": "example-search",
+        "provider_result_id": "result-123",
+        "rank": 2,
+        "publication_date": "2026-10-01",
+    }
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await candidate_fetch._fetch_one_candidate(client, candidate)
+
+    first = asyncio.run(run())
+    second = asyncio.run(run())
+    assert first["candidate_id"] == second["candidate_id"]
+    assert first["canonical_url"] == candidate["url"]
+    assert first["final_url"] == candidate["url"]
+    assert first["domain"] == "example.org"
+    assert first["provider"] == "example-search"
+    assert first["provider_result_id"] == "result-123"
+    assert first["provider_title"] == "Search provider title"
+    assert first["snippet"] == "Provider supplied summary"
+    assert first["rank"] == 2
+    assert first["publication_date"] == "2026-10-01"
+    assert first["retrieved_at"]
+    assert first["approved"] is False
+    assert first["evidence_class"] is None
+
+
+def test_candidate_fetch_does_not_trust_invalid_provider_rank(monkeypatch):
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, request=request)
+        body = ("<html><body><main><h1>Service guide</h1><p>"
+                + ("Useful service information for applicants. " * 8)
+                + "</p></main></body></html>")
+        return httpx.Response(200, request=request, headers={"content-type": "text/html"}, text=body)
+
+    async def public_dns(host, port=443):
+        return None
+
+    monkeypatch.setattr(candidate_fetch, "_resolve_public_host", public_dns)
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await candidate_fetch._fetch_one_candidate(
+                client, {"url": "https://example.org/service", "rank": "first"}
+            )
+
+    result = asyncio.run(run())
+    assert result["status"] == "candidate_unreviewed"
+    assert result["rank"] is None
