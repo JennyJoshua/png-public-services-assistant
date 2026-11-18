@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import Enum
 from typing import Protocol, Sequence
@@ -218,3 +218,82 @@ class SearchProvider(Protocol):
     async def search(self, query: str, *, limit: int = 10) -> Sequence[SearchResult]:
         """Return normalised search results; implementations enforce provider limits."""
         ...
+
+
+
+ALLOWED_SOURCE_STATUS_TRANSITIONS: dict[SourceStatus, frozenset[SourceStatus]] = {
+    SourceStatus.PENDING_REVIEW: frozenset({SourceStatus.ACTIVE, SourceStatus.BROKEN}),
+    SourceStatus.ACTIVE: frozenset({
+        SourceStatus.PENDING_REVIEW,
+        SourceStatus.BROKEN,
+        SourceStatus.SUPERSEDED,
+    }),
+    SourceStatus.BROKEN: frozenset({SourceStatus.PENDING_REVIEW}),
+    SourceStatus.SUPERSEDED: frozenset({SourceStatus.PENDING_REVIEW}),
+}
+
+
+class EvidenceUse(str, Enum):
+    """Maximum permitted use of evidence under the source governance policy."""
+
+    PRIMARY = "primary"
+    SUPPORTING = "supporting"
+    SUPPLEMENTARY = "supplementary"
+    EXCLUDED = "excluded"
+
+
+def transition_source_status(
+    source: SourceRecord,
+    new_status: SourceStatus,
+    *,
+    reviewed_at: datetime | None = None,
+) -> SourceRecord:
+    """Return a new source record after a permitted lifecycle transition.
+
+    Activation requires a timezone-aware human-review timestamp. Fetch success,
+    indexing and domain matching must never activate a source automatically.
+    """
+    if not isinstance(new_status, SourceStatus):
+        raise RetrievalContractError("New source status must be a SourceStatus value.")
+    if new_status is source.status:
+        return source
+    if new_status not in ALLOWED_SOURCE_STATUS_TRANSITIONS[source.status]:
+        raise RetrievalContractError(
+            f"Source status transition not allowed: {source.status.value} -> {new_status.value}."
+        )
+    if new_status is SourceStatus.ACTIVE:
+        if reviewed_at is None or reviewed_at.tzinfo is None:
+            raise RetrievalContractError(
+                "A timezone-aware human review timestamp is required before activation."
+            )
+        return replace(source, status=new_status, last_reviewed_at=reviewed_at)
+    return replace(source, status=new_status)
+
+
+def evidence_use_for_source(source: SourceRecord) -> EvidenceUse:
+    """Return the maximum evidence role; unknown or inactive sources fail closed.
+
+    Class A may support primary claims. Class B is supporting evidence only.
+    Class C is supplementary context and must not be presented as official
+    requirements. Class D, unclassified, pending, broken and superseded sources
+    are excluded from answer evidence.
+    """
+    if source.status is not SourceStatus.ACTIVE:
+        return EvidenceUse.EXCLUDED
+    if source.source_class is SourceClass.APPROVED_AUTHORITATIVE:
+        return EvidenceUse.PRIMARY
+    if source.source_class is SourceClass.RECOGNISED_INSTITUTIONAL:
+        return EvidenceUse.SUPPORTING
+    if source.source_class is SourceClass.GENERAL_WEB:
+        return EvidenceUse.SUPPLEMENTARY
+    return EvidenceUse.EXCLUDED
+
+
+def is_eligible_for_answer(source: SourceRecord) -> bool:
+    """Whether a source can be included in answer evidence at all."""
+    return evidence_use_for_source(source) is not EvidenceUse.EXCLUDED
+
+
+def is_eligible_for_primary_claim(source: SourceRecord) -> bool:
+    """Only active Class A evidence may support a primary-authority claim."""
+    return evidence_use_for_source(source) is EvidenceUse.PRIMARY
