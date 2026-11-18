@@ -1,8 +1,8 @@
 """Risk-based policy for discovered candidate pages.
 
-Configured source hosts are the trust boundary. Pages on those exact hosts may
-enter automated processing; unfamiliar hosts are held for exception review.
-This policy does not fetch, persist, publish, or alter live answer evidence.
+Configured seed hosts are a discovery boundary, not proof that every page is
+authoritative evidence. Matching pages may enter automated processing, while
+evidence classification and approval remain separate decisions.
 """
 from __future__ import annotations
 
@@ -24,10 +24,11 @@ class CandidatePolicyResult:
 
 
 def configured_trusted_hosts() -> frozenset[str]:
-    """Return exact hosts represented by the curated source registry.
+    """Return exact hosts represented in the curated seed-source configuration.
 
-    Exact host matching is intentional: trusting one *.gov.pg host must not
-    implicitly trust every other government or third-party subdomain.
+    These hosts are trusted for automated candidate processing only. This
+    function does not assert that each page is reviewed, active, or Class A.
+    Exact matching prevents implicit trust of sibling or child subdomains.
     """
     return frozenset(
         (urlsplit(source.url).hostname or "").lower()
@@ -40,9 +41,8 @@ def _candidate_hosts(candidate: dict) -> tuple[str, ...] | None:
     """Validate the candidate's original/canonical and final HTTPS destinations."""
     original = candidate.get("canonical_url") or candidate.get("url")
     final = candidate.get("final_url") or original
-    values = (original, final)
     hosts: list[str] = []
-    for value in values:
+    for value in (original, final):
         if not isinstance(value, str) or not value.strip():
             return None
         parsed = urlsplit(value.strip())
@@ -70,10 +70,10 @@ def evaluate_candidate_policy(
 ) -> CandidatePolicyResult:
     """Choose automated processing, exception review, or exclusion.
 
-    A successfully fetched candidate from an exact configured source host is
-    eligible for automated processing as Class A. A new host, or a redirect
-    involving an untrusted host, requires exception review. Invalid URLs,
-    failed fetches and malformed candidate states are excluded.
+    Successful candidates whose original and final URLs use exact configured
+    seed hosts are eligible for automated processing. No evidence class or
+    approval is assigned. New hosts and untrusted redirects require exception
+    review; malformed, unsafe, or failed candidates are excluded.
     """
     if not isinstance(candidate, dict):
         return CandidatePolicyResult("exclude", None, None, "Candidate must be a mapping.")
@@ -86,21 +86,24 @@ def evaluate_candidate_policy(
     if hosts is None:
         return CandidatePolicyResult("exclude", None, None, "Candidate must have valid clean HTTPS original and final URLs.")
 
-    allowed = frozenset(host.lower().rstrip(".") for host in (trusted_hosts if trusted_hosts is not None else configured_trusted_hosts()))
+    allowed = frozenset(
+        host.lower().rstrip(".")
+        for host in (trusted_hosts if trusted_hosts is not None else configured_trusted_hosts())
+    )
     if not allowed:
-        return CandidatePolicyResult("exclude", None, None, "No trusted source hosts are configured.")
+        return CandidatePolicyResult("exclude", None, None, "No configured seed-source hosts are available.")
 
     if all(host in allowed for host in hosts):
         return CandidatePolicyResult(
             "auto_process",
-            "A",
+            None,
             hosts[-1],
-            "Original and final URLs are on exact hosts already present in the curated source registry.",
+            "Original and final URLs match exact configured seed-source hosts; evidence classification remains separate.",
         )
 
     return CandidatePolicyResult(
         "human_review",
         None,
         None,
-        "A new or untrusted host was discovered; verify the institution and domain before adding it to the trusted host registry.",
+        "A new or unconfigured host was discovered; verify the institution and domain before adding it to the trusted seed-source configuration.",
     )
