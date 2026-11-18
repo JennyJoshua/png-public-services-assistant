@@ -19,6 +19,7 @@ MAX_CANDIDATES = 5
 MAX_CONCURRENCY = 2
 MAX_REDIRECTS = 3
 MAX_DOWNLOAD_BYTES = 1_000_000
+MAX_ROBOTS_BYTES = 256_000
 MAX_TEXT_CHARS = 12_000
 REQUEST_TIMEOUT = httpx.Timeout(8.0, connect=4.0)
 REDIRECT_CODES = {301, 302, 303, 307, 308}
@@ -79,42 +80,28 @@ async def _check_robots(client: httpx.AsyncClient, page_url: str) -> None:
     robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
     await _resolve_public_host(parsed.hostname or "")
     try:
-        response = await client.get(robots_url, follow_redirects=False)
+        async with client.stream("GET", robots_url, follow_redirects=False) as response:
+            if response.status_code == 404:
+                return
+            if response.status_code != 200:
+                raise CandidateFetchError("Robots policy could not be confirmed; candidate fetch blocked.")
+            raw = bytearray()
+            async for chunk in response.aiter_bytes():
+                raw.extend(chunk)
+                if len(raw) > MAX_ROBOTS_BYTES:
+                    raise CandidateFetchError("Robots policy file exceeds the safety limit; candidate fetch blocked.")
     except httpx.HTTPError as exc:
         raise CandidateFetchError("Robots policy could not be checked; candidate fetch blocked.") from exc
-    if response.status_code == 404:
-        return
-    if response.status_code != 200:
-        raise CandidateFetchError("Robots policy could not be confirmed; candidate fetch blocked.")
     parser = RobotFileParser()
     parser.set_url(robots_url)
-    parser.parse(response.text.splitlines())
+    parser.parse(bytes(raw).decode("utf-8", errors="replace").splitlines())
     if not parser.can_fetch(USER_AGENT, page_url):
         raise CandidateFetchError("Candidate page is disallowed by robots.txt.")
-
-
-def _extract_candidate_html(raw: bytes) -> tuple[str, str]:
-    soup = BeautifulSoup(raw, "html.parser")
-    title = soup.title.get_text(" ", strip=True) if soup.title else ""
-    for element in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript", "svg"]):
-        element.decompose()
-    main = soup.find("main") or soup.find("article") or soup.body or soup
-    blocks = []
-    for element in main.find_all(["h1", "h2", "h3", "h4", "p", "li", "blockquote", "dt", "dd"]):
-        text = " ".join(element.get_text(" ", strip=True).split())
-        if text and (not blocks or text != blocks[-1]):
-            blocks.append(text)
-        if sum(len(item) + 1 for item in blocks) >= MAX_TEXT_CHARS:
-            break
-    text = "\n".join(blocks)[:MAX_TEXT_CHARS]
-    return text, title
-
-
 async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> dict:
-    original_url = _normalise_candidate_url(candidate.get("url", ""))
-    current_url = original_url
-    robots_checked: set[str] = set()
     try:
+        original_url = _normalise_candidate_url(candidate.get("url", ""))
+        current_url = original_url
+        robots_checked: set[str] = set()
         for redirect_count in range(MAX_REDIRECTS + 1):
             parsed = urlsplit(current_url)
             host = parsed.hostname or ""
@@ -123,36 +110,38 @@ async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> di
             if origin not in robots_checked:
                 await _check_robots(client, current_url)
                 robots_checked.add(origin)
-            response = await client.get(
+            async with client.stream(
+                "GET",
                 current_url,
                 follow_redirects=False,
                 headers={"Accept": "text/html,application/xhtml+xml"},
-            )
-            if response.status_code in REDIRECT_CODES:
-                if redirect_count >= MAX_REDIRECTS:
-                    raise CandidateFetchError("Candidate exceeded the redirect limit.")
-                location = response.headers.get("location")
-                if not location:
-                    raise CandidateFetchError("Candidate redirect has no location.")
-                current_url = _normalise_candidate_url(urljoin(current_url, location))
-                continue
-            if response.status_code != 200:
-                raise CandidateFetchError(f"Candidate returned HTTP {response.status_code}.")
-            content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
-            if content_type not in ACCEPTED_CONTENT_TYPES:
-                raise CandidateFetchError("Candidate content type is not supported HTML.")
-            content_length = response.headers.get("content-length")
-            if content_length:
-                try:
-                    if int(content_length) > MAX_DOWNLOAD_BYTES:
+            ) as response:
+                if response.status_code in REDIRECT_CODES:
+                    if redirect_count >= MAX_REDIRECTS:
+                        raise CandidateFetchError("Candidate exceeded the redirect limit.")
+                    location = response.headers.get("location")
+                    if not location:
+                        raise CandidateFetchError("Candidate redirect has no location.")
+                    next_url = _normalise_candidate_url(urljoin(current_url, location))
+                    current_url = next_url
+                    continue
+                if response.status_code != 200:
+                    raise CandidateFetchError(f"Candidate returned HTTP {response.status_code}.")
+                content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+                if content_type not in ACCEPTED_CONTENT_TYPES:
+                    raise CandidateFetchError("Candidate content type is not supported HTML.")
+                content_length = response.headers.get("content-length")
+                if content_length:
+                    try:
+                        if int(content_length) > MAX_DOWNLOAD_BYTES:
+                            raise CandidateFetchError("Candidate exceeds the download-size limit.")
+                    except ValueError as exc:
+                        raise CandidateFetchError("Candidate has an invalid content-length header.") from exc
+                raw = bytearray()
+                async for chunk in response.aiter_bytes():
+                    raw.extend(chunk)
+                    if len(raw) > MAX_DOWNLOAD_BYTES:
                         raise CandidateFetchError("Candidate exceeds the download-size limit.")
-                except ValueError as exc:
-                    raise CandidateFetchError("Candidate has an invalid content-length header.") from exc
-            raw = bytearray()
-            async for chunk in response.aiter_bytes():
-                raw.extend(chunk)
-                if len(raw) > MAX_DOWNLOAD_BYTES:
-                    raise CandidateFetchError("Candidate exceeds the download-size limit.")
             text, page_title = _extract_candidate_html(bytes(raw))
             if len(text) < 80:
                 raise CandidateFetchError("Candidate page contains insufficient extractable text.")
@@ -171,29 +160,12 @@ async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> di
                 "approved": False,
             }
         raise CandidateFetchError("Candidate redirect limit reached.")
-    except (CandidateFetchError, httpx.HTTPError) as exc:
+    except (CandidateFetchError, httpx.HTTPError, ValueError) as exc:
         return {
-            "url": original_url,
+            "url": str(candidate.get("url", ""))[:500],
             "status": "unavailable",
             "approved": False,
             "evidence_class": None,
             "error": str(exc)[:240],
         }
 
-
-async def fetch_candidate_pages(candidates: list[dict]) -> list[dict]:
-    """Fetch at most five candidates, two concurrently; failures remain inspectable."""
-    bounded = list(candidates[:MAX_CANDIDATES])
-    if not bounded:
-        return []
-    semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
-    async with httpx.AsyncClient(
-        timeout=REQUEST_TIMEOUT,
-        headers={"User-Agent": USER_AGENT},
-        follow_redirects=False,
-        trust_env=False,
-    ) as client:
-        async def limited(candidate: dict) -> dict:
-            async with semaphore:
-                return await _fetch_one_candidate(client, candidate)
-        return await asyncio.gather(*(limited(item) for item in bounded))
