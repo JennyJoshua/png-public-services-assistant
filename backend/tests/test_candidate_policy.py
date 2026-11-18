@@ -26,10 +26,10 @@ def test_configured_trust_is_derived_from_exact_seed_hosts():
     assert "unlisted.gov.pg" not in hosts
 
 
-def test_candidate_on_exact_configured_host_is_automatically_eligible():
+def test_candidate_on_exact_configured_host_is_eligible_without_classification():
     result = evaluate_candidate_policy(candidate())
     assert result.action == "auto_process"
-    assert result.source_class == "A"
+    assert result.source_class is None
     assert result.trusted_host == "ica.gov.pg"
 
 
@@ -54,11 +54,9 @@ def test_untrusted_redirect_prevents_automatic_processing():
 
 
 def test_all_hosts_must_be_exactly_trusted():
-    result = evaluate_candidate_policy(
-        candidate(),
-        trusted_hosts={"ica.gov.pg"},
-    )
+    result = evaluate_candidate_policy(candidate(), trusted_hosts={"ica.gov.pg"})
     assert result.action == "auto_process"
+    assert result.source_class is None
 
     subdomain = evaluate_candidate_policy(
         candidate(
@@ -82,9 +80,7 @@ def test_all_hosts_must_be_exactly_trusted():
     ],
 )
 def test_invalid_or_unsafe_urls_are_excluded(url):
-    result = evaluate_candidate_policy(
-        candidate(url=url, canonical_url=url, final_url=url)
-    )
+    result = evaluate_candidate_policy(candidate(url=url, canonical_url=url, final_url=url))
     assert result.action == "exclude"
     assert result.source_class is None
 
@@ -97,6 +93,6 @@ def test_invalid_or_unsafe_urls_are_excluded(url):
         {"evidence_class": "A"},
     ],
 )
-def test_only_successfully_fetched_unapproved_candidates_are_evaluated(overrides):
+def test_only_successfully_fetched_unreviewed_candidates_are_evaluated(overrides):
     result = evaluate_candidate_policy(candidate(**overrides))
     assert result.action == "exclude"
