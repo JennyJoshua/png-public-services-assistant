@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import hashlib
 import logging
 import re
 from datetime import datetime, timedelta, timezone
@@ -25,6 +26,8 @@ MAX_CONTEXT_PAGES = 6
 USER_AGENT = "PNGPublicServicesAssistant/1.0 (+https://github.com/JennyJoshua/png-public-services-assistant)"
 
 _CACHE: dict[str, dict] = {}
+# Changed source versions are held separately until an explicit review workflow exists.
+_PENDING_CHANGES: dict[str, dict] = {}
 _STATUS: dict[str, dict] = {
     source.url: {
         "url": source.url,
@@ -39,6 +42,11 @@ _STATUS: dict[str, dict] = {
         "text_chars": 0,
         "cached": False,
         "error": "Not fetched yet",
+        "content_hash": None,
+        "candidate_content_hash": None,
+        "content_changed": False,
+        "review_required": False,
+        "change_detected_at": None,
     }
     for source in SOURCES
 }
@@ -170,6 +178,7 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
             "publication_date": None,
             "last_checked_at": fetched_at,
             "text": text,
+            "content_hash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         }
         status.update({
             "last_success_at": fetched_at,
@@ -205,7 +214,44 @@ async def refresh_sources(*, force: bool = True) -> dict:
         successes = 0
         for source, (page, status) in zip(SOURCES, results):
             if page is not None:
-                _CACHE[source.url] = page
+                existing = _CACHE.get(source.url)
+                existing_hash = (
+                    existing.get("content_hash")
+                    or hashlib.sha256(str(existing.get("text", "")).encode("utf-8")).hexdigest()
+                ) if existing else None
+                new_hash = page["content_hash"]
+                prior_status = _STATUS.get(source.url, {})
+                review_pending = bool(prior_status.get("review_required"))
+                if existing and existing_hash != new_hash:
+                    # Keep the last known-good copy in runtime context. A changed
+                    # version is recorded as a candidate and cannot silently replace it.
+                    status.update({
+                        "content_hash": existing_hash,
+                        "candidate_content_hash": new_hash,
+                        "content_changed": True,
+                        "review_required": True,
+                        "change_detected_at": prior_status.get("change_detected_at") or now.isoformat(),
+                    })
+                    _PENDING_CHANGES[source.url] = page
+                elif existing and review_pending:
+                    # A later fetch must not clear a human-review gate automatically.
+                    status.update({
+                        "content_hash": existing_hash,
+                        "candidate_content_hash": prior_status.get("candidate_content_hash"),
+                        "content_changed": True,
+                        "review_required": True,
+                        "change_detected_at": prior_status.get("change_detected_at"),
+                    })
+                else:
+                    _CACHE[source.url] = page
+                    _PENDING_CHANGES.pop(source.url, None)
+                    status.update({
+                        "content_hash": new_hash,
+                        "candidate_content_hash": None,
+                        "content_changed": False,
+                        "review_required": False,
+                        "change_detected_at": None,
+                    })
                 successes += 1
             status["cached"] = source.url in _CACHE
             _STATUS[source.url] = status
