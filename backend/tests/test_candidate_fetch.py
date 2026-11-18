@@ -4,6 +4,7 @@ import httpx
 import pytest
 
 from app import candidate_fetch
+from app.source_registry import SOURCES
 
 
 def test_candidate_url_requires_clean_https_and_standard_port():
@@ -158,6 +159,7 @@ def test_candidate_count_is_capped_at_five(monkeypatch):
     result = asyncio.run(run())
     assert len(result) == 5
     assert len(seen) == 5
+    assert all(item["discovery_policy_action"] == "exclude" for item in result)
 
 
 def test_candidate_fetch_preserves_provider_provenance_and_stable_identity(monkeypatch):
@@ -228,3 +230,40 @@ def test_candidate_fetch_does_not_trust_invalid_provider_rank(monkeypatch):
     result = asyncio.run(run())
     assert result["status"] == "candidate_unreviewed"
     assert result["rank"] is None
+
+
+def test_candidate_policy_is_attached_after_fetch_without_promoting_evidence(monkeypatch):
+    trusted_url = SOURCES[0].url
+    trusted_host = trusted_url.split("/")[2]
+    successful = {
+        "candidate_id": "candidate-1",
+        "url": trusted_url,
+        "canonical_url": trusted_url,
+        "final_url": trusted_url,
+        "status": "candidate_unreviewed",
+        "approved": False,
+        "evidence_class": None,
+        "text": "Fetched candidate page text.",
+    }
+
+    async def fake_fetch(client, candidate):
+        return {**successful, "url": candidate["url"], "canonical_url": candidate["url"],
+                "final_url": candidate["url"]}
+
+    monkeypatch.setattr(candidate_fetch, "_fetch_one_candidate", fake_fetch)
+
+    async def run():
+        return await candidate_fetch.fetch_candidate_pages([
+            {"url": trusted_url},
+            {"url": "https://new-unlisted.example/service"},
+        ])
+
+    results = asyncio.run(run())
+    trusted, untrusted = results
+    assert trusted["discovery_policy_action"] == "auto_process"
+    assert trusted["configured_seed_host"] == trusted_host
+    assert trusted["approved"] is False
+    assert trusted["evidence_class"] is None
+    assert untrusted["discovery_policy_action"] == "human_review"
+    assert untrusted["approved"] is False
+    assert untrusted["evidence_class"] is None
