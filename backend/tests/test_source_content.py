@@ -176,3 +176,96 @@ def test_html_extraction_rejects_javascript_only_application_shell():
     html = b"<html><body><main>You need to enable JavaScript to run this app.</main></body></html>"
     text, _ = _extract_html(html)
     assert text == ""
+
+
+
+def test_refresh_detects_content_change_and_keeps_previous_good_copy(monkeypatch):
+    from app import source_content
+
+    source = SOURCES[0]
+    old_text = "Previously fetched official service information that is still current."
+    new_text = "Updated official service information requiring human review before use."
+    old_page = {
+        "institution": source.institution,
+        "agency": source.institution,
+        "title": "Old title",
+        "topic": source.title,
+        "url": source.url,
+        "final_url": source.url,
+        "content_type": "text/html",
+        "publication_date": None,
+        "last_checked_at": "2026-11-17T00:00:00+00:00",
+        "text": old_text,
+        "content_hash": __import__("hashlib").sha256(old_text.encode()).hexdigest(),
+    }
+    new_page = {**old_page, "title": "New title", "text": new_text,
+                "content_hash": __import__("hashlib").sha256(new_text.encode()).hexdigest()}
+    status = {"url": source.url, "review_required": False, "change_detected_at": None}
+    monkeypatch.setattr(source_content, "SOURCES", (source,))
+    monkeypatch.setattr(source_content, "_LAST_REFRESH", None)
+    monkeypatch.setitem(source_content._CACHE, source.url, old_page)
+    monkeypatch.setitem(source_content._STATUS, source.url, status)
+
+    async def fake_fetch(client, item):
+        return new_page, {"last_success_at": "2026-11-18T00:00:00+00:00",
+                          "fetch_succeeded": True, "usable_text": True, "error": None}
+
+    monkeypatch.setattr(source_content, "_fetch_one", fake_fetch)
+
+    async def fake_client_context():
+        pass
+
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *args):
+            return False
+
+    original_client = source_content.httpx.AsyncClient
+    monkeypatch.setattr(source_content.httpx, "AsyncClient", lambda **kwargs: FakeClient())
+    result = asyncio.run(source_content.refresh_sources())
+
+    current_status = source_content.get_sources_status()["sources"][0]
+    assert result["successful"] == 1
+    assert source_content._CACHE[source.url]["text"] == old_text
+    assert source_content._PENDING_CHANGES[source.url]["text"] == new_text
+    assert current_status["review_required"] is True
+    assert current_status["content_changed"] is True
+    assert current_status["candidate_content_hash"] == new_page["content_hash"]
+    monkeypatch.setattr(source_content.httpx, "AsyncClient", original_client)
+
+
+def test_change_review_gate_is_not_cleared_by_same_old_content(monkeypatch):
+    from app import source_content
+
+    source = SOURCES[0]
+    old_text = "Previously fetched official service information that is still current."
+    old_hash = __import__("hashlib").sha256(old_text.encode()).hexdigest()
+    old_page = {"url": source.url, "text": old_text, "content_hash": old_hash}
+    monkeypatch.setattr(source_content, "SOURCES", (source,))
+    monkeypatch.setitem(source_content._CACHE, source.url, old_page)
+    monkeypatch.setitem(source_content._STATUS, source.url, {
+        "url": source.url, "review_required": True,
+        "candidate_content_hash": "a" * 64,
+        "change_detected_at": "2026-11-18T00:00:00+00:00",
+    })
+
+    async def fake_fetch(client, item):
+        return {**old_page, "last_checked_at": "2026-11-18T01:00:00+00:00"}, {
+            "last_success_at": "2026-11-18T01:00:00+00:00",
+            "fetch_succeeded": True, "usable_text": True, "error": None,
+        }
+
+    monkeypatch.setattr(source_content, "_fetch_one", fake_fetch)
+
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *args):
+            return False
+
+    monkeypatch.setattr(source_content.httpx, "AsyncClient", lambda **kwargs: FakeClient())
+    asyncio.run(source_content.refresh_sources())
+    current_status = source_content.get_sources_status()["sources"][0]
+    assert current_status["review_required"] is True
+    assert current_status["candidate_content_hash"] == "a" * 64
