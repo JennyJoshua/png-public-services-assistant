@@ -1,116 +1,102 @@
-from datetime import datetime, timezone
-
 import pytest
 
-from app.candidate_review import CandidateReviewError, review_candidate
-from app.retrieval_contracts import SourceClass, SourceStatus
-
-NOW = datetime(2026, 11, 18, 8, 0, tzinfo=timezone.utc)
+from app.candidate_policy import (
+    configured_trusted_hosts,
+    evaluate_candidate_policy,
+)
 
 
 def candidate(**overrides):
     values = {
-        "candidate_id": "candidate-123",
-        "title": "Public service information",
-        "url": "https://example.gov.pg/service",
-        "canonical_url": "https://example.gov.pg/service",
+        "url": "https://ica.gov.pg/passport/applying-for-a-png-passport",
+        "canonical_url": "https://ica.gov.pg/passport/applying-for-a-png-passport",
+        "final_url": "https://ica.gov.pg/passport/applying-for-a-png-passport",
         "status": "candidate_unreviewed",
         "approved": False,
         "evidence_class": None,
-        "publication_date": None,
     }
     values.update(overrides)
     return values
 
 
-def test_candidate_cannot_be_approved_without_explicit_human_review():
-    with pytest.raises(CandidateReviewError, match="reviewer"):
-        review_candidate(
-            candidate(), decision="approve", reviewer=" ",
-            reviewed_at=NOW, source_class=SourceClass.APPROVED_AUTHORITATIVE,
-            institution="Example Agency",
+def test_configured_trust_is_derived_from_exact_seed_hosts():
+    hosts = configured_trusted_hosts()
+    assert "ica.gov.pg" in hosts
+    assert "www.ipa.gov.pg" in hosts
+    assert "unlisted.gov.pg" not in hosts
+
+
+def test_candidate_on_exact_configured_host_is_automatically_eligible():
+    result = evaluate_candidate_policy(candidate())
+    assert result.action == "auto_process"
+    assert result.source_class == "A"
+    assert result.trusted_host == "ica.gov.pg"
+
+
+def test_new_government_host_requires_exception_review_not_automatic_trust():
+    result = evaluate_candidate_policy(
+        candidate(
+            url="https://new-agency.gov.pg/service",
+            canonical_url="https://new-agency.gov.pg/service",
+            final_url="https://new-agency.gov.pg/service",
         )
+    )
+    assert result.action == "human_review"
+    assert result.source_class is None
 
 
-def test_approval_requires_explicit_class_and_institution_and_activates_with_review_stamp():
-    result = review_candidate(
+def test_untrusted_redirect_prevents_automatic_processing():
+    result = evaluate_candidate_policy(
+        candidate(final_url="https://third-party.example/service")
+    )
+    assert result.action == "human_review"
+    assert result.source_class is None
+
+
+def test_all_hosts_must_be_exactly_trusted():
+    result = evaluate_candidate_policy(
         candidate(),
-        decision="approve",
-        reviewer="source-reviewer",
-        reviewed_at=NOW,
-        source_class=SourceClass.APPROVED_AUTHORITATIVE,
-        institution="Example PNG Agency",
+        trusted_hosts={"ica.gov.pg"},
     )
-    assert result.decision == "approve"
-    assert result.reviewer == "source-reviewer"
-    assert result.reviewed_at == NOW
-    assert result.source is not None
-    assert result.source.status is SourceStatus.ACTIVE
-    assert result.source.source_class is SourceClass.APPROVED_AUTHORITATIVE
-    assert result.source.last_reviewed_at == NOW
-    assert result.source.authority_tier is None
-    assert result.source.jurisdiction is None
+    assert result.action == "auto_process"
 
-
-def test_class_d_cannot_be_approved():
-    with pytest.raises(CandidateReviewError, match="A, B or C"):
-        review_candidate(
-            candidate(), decision="approve", reviewer="reviewer",
-            reviewed_at=NOW, source_class=SourceClass.UNVERIFIED_UNSAFE,
-            institution="Example",
-        )
-
-
-def test_general_web_can_only_be_approved_as_class_c():
-    result = review_candidate(
-        candidate(url="https://example.com/info", canonical_url="https://example.com/info"),
-        decision="approve",
-        reviewer="reviewer",
-        reviewed_at=NOW,
-        source_class=SourceClass.GENERAL_WEB,
-        institution="Example publisher",
+    subdomain = evaluate_candidate_policy(
+        candidate(
+            url="https://new.ica.gov.pg/service",
+            canonical_url="https://new.ica.gov.pg/service",
+            final_url="https://new.ica.gov.pg/service",
+        ),
+        trusted_hosts={"ica.gov.pg"},
     )
-    assert result.source.source_class is SourceClass.GENERAL_WEB
+    assert subdomain.action == "human_review"
 
 
-def test_rejection_never_creates_an_active_source():
-    result = review_candidate(
-        candidate(), decision="reject", reviewer="reviewer",
-        reviewed_at=NOW, reason="Not relevant to PNG public services.",
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://ica.gov.pg/service",
+        "https://user:pass@ica.gov.pg/service",
+        "https://ica.gov.pg:8443/service",
+        "https://ica.gov.pg/service#fragment",
+        "not-a-url",
+    ],
+)
+def test_invalid_or_unsafe_urls_are_excluded(url):
+    result = evaluate_candidate_policy(
+        candidate(url=url, canonical_url=url, final_url=url)
     )
-    assert result.decision == "reject"
-    assert result.source is None
-    assert result.reason == "Not relevant to PNG public services."
+    assert result.action == "exclude"
+    assert result.source_class is None
 
 
-@pytest.mark.parametrize("invalid", [
-    {"status": "unavailable", "approved": False, "evidence_class": None},
-    {"status": "candidate_unreviewed", "approved": True, "evidence_class": None},
-    {"status": "candidate_unreviewed", "approved": False, "evidence_class": "A"},
-])
-def test_only_pristine_unreviewed_candidates_enter_review_gate(invalid):
-    with pytest.raises(CandidateReviewError):
-        review_candidate(
-            candidate(**invalid), decision="reject", reviewer="reviewer",
-            reviewed_at=NOW,
-        )
-
-
-def test_review_timestamp_must_be_timezone_aware():
-    with pytest.raises(CandidateReviewError, match="timezone-aware"):
-        review_candidate(
-            candidate(), decision="reject", reviewer="reviewer",
-            reviewed_at=datetime(2026, 11, 18, 8, 0),
-        )
-
-
-def test_approval_rejects_non_https_candidate_urls():
-    with pytest.raises(ValueError):
-        review_candidate(
-            candidate(url="http://example.gov.pg/service", canonical_url="http://example.gov.pg/service"),
-            decision="approve",
-            reviewer="reviewer",
-            reviewed_at=NOW,
-            source_class=SourceClass.APPROVED_AUTHORITATIVE,
-            institution="Example Agency",
-        )
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"status": "unavailable"},
+        {"approved": True},
+        {"evidence_class": "A"},
+    ],
+)
+def test_only_successfully_fetched_unapproved_candidates_are_evaluated(overrides):
+    result = evaluate_candidate_policy(candidate(**overrides))
+    assert result.action == "exclude"
