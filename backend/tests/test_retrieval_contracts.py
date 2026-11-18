@@ -283,3 +283,96 @@ def test_fetched_document_rejects_redirect_from_non_government_host_to_gov_pg():
             text=TEXT,
             retrieved_at=NOW,
         )
+
+
+
+def test_source_status_transition_requires_timezone_aware_human_review():
+    from app.retrieval_contracts import transition_source_status
+
+    source = make_source()
+    with pytest.raises(RetrievalContractError, match="human review timestamp"):
+        transition_source_status(source, SourceStatus.ACTIVE)
+    with pytest.raises(RetrievalContractError, match="human review timestamp"):
+        transition_source_status(
+            source,
+            SourceStatus.ACTIVE,
+            reviewed_at=datetime(2026, 11, 18, 7, 0),
+        )
+
+    reviewed = transition_source_status(
+        source,
+        SourceStatus.ACTIVE,
+        reviewed_at=NOW,
+    )
+    assert reviewed.status is SourceStatus.ACTIVE
+    assert reviewed.last_reviewed_at == NOW
+    assert source.status is SourceStatus.PENDING_REVIEW
+
+
+def test_source_status_transition_blocks_automatic_reactivation():
+    from app.retrieval_contracts import transition_source_status
+
+    source = make_source()
+    active = transition_source_status(source, SourceStatus.ACTIVE, reviewed_at=NOW)
+    broken = transition_source_status(active, SourceStatus.BROKEN)
+    with pytest.raises(RetrievalContractError, match="not allowed"):
+        transition_source_status(broken, SourceStatus.ACTIVE)
+    pending = transition_source_status(broken, SourceStatus.PENDING_REVIEW)
+    reactivated = transition_source_status(
+        pending, SourceStatus.ACTIVE, reviewed_at=NOW
+    )
+    assert reactivated.status is SourceStatus.ACTIVE
+
+
+@pytest.mark.parametrize(
+    ("status", "source_class", "expected"),
+    [
+        (SourceStatus.ACTIVE, SourceClass.APPROVED_AUTHORITATIVE, "primary"),
+        (SourceStatus.ACTIVE, SourceClass.RECOGNISED_INSTITUTIONAL, "supporting"),
+        (SourceStatus.ACTIVE, SourceClass.GENERAL_WEB, "supplementary"),
+        (SourceStatus.ACTIVE, SourceClass.UNVERIFIED_UNSAFE, "excluded"),
+        (SourceStatus.ACTIVE, None, "excluded"),
+        (SourceStatus.PENDING_REVIEW, SourceClass.APPROVED_AUTHORITATIVE, "excluded"),
+        (SourceStatus.BROKEN, SourceClass.APPROVED_AUTHORITATIVE, "excluded"),
+        (SourceStatus.SUPERSEDED, SourceClass.APPROVED_AUTHORITATIVE, "excluded"),
+    ],
+)
+def test_evidence_use_fails_closed_for_unreviewed_or_disallowed_sources(
+    status, source_class, expected
+):
+    from app.retrieval_contracts import EvidenceUse, evidence_use_for_source
+
+    source = make_source(
+        status=status,
+        source_class=source_class,
+        last_reviewed_at=NOW if status is SourceStatus.ACTIVE else None,
+    )
+    assert evidence_use_for_source(source) is EvidenceUse(expected)
+
+
+def test_only_active_class_a_can_support_primary_claims():
+    from app.retrieval_contracts import (
+        is_eligible_for_answer,
+        is_eligible_for_primary_claim,
+    )
+
+    primary = make_source(
+        status=SourceStatus.ACTIVE,
+        source_class=SourceClass.APPROVED_AUTHORITATIVE,
+        last_reviewed_at=NOW,
+    )
+    general = make_source(
+        status=SourceStatus.ACTIVE,
+        source_class=SourceClass.GENERAL_WEB,
+        last_reviewed_at=NOW,
+    )
+    pending = make_source(
+        source_class=SourceClass.APPROVED_AUTHORITATIVE,
+    )
+
+    assert is_eligible_for_answer(primary)
+    assert is_eligible_for_primary_claim(primary)
+    assert is_eligible_for_answer(general)
+    assert not is_eligible_for_primary_claim(general)
+    assert not is_eligible_for_answer(pending)
+    assert not is_eligible_for_primary_claim(pending)
