@@ -15,6 +15,8 @@ from urllib.robotparser import RobotFileParser
 import httpx
 from bs4 import BeautifulSoup
 
+from app.candidate_policy import evaluate_candidate_policy
+
 USER_AGENT = "PNGPublicServicesAssistant/1.0 (+https://github.com/JennyJoshua/png-public-services-assistant)"
 MAX_CANDIDATES = 5
 MAX_CONCURRENCY = 2
@@ -98,6 +100,8 @@ async def _check_robots(client: httpx.AsyncClient, page_url: str) -> None:
     parser.parse(bytes(raw).decode("utf-8", errors="replace").splitlines())
     if not parser.can_fetch(USER_AGENT, page_url):
         raise CandidateFetchError("Candidate page is disallowed by robots.txt.")
+
+
 async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> dict:
     try:
         original_url = _normalise_candidate_url(candidate.get("url", ""))
@@ -123,8 +127,7 @@ async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> di
                     location = response.headers.get("location")
                     if not location:
                         raise CandidateFetchError("Candidate redirect has no location.")
-                    next_url = _normalise_candidate_url(urljoin(current_url, location))
-                    current_url = next_url
+                    current_url = _normalise_candidate_url(urljoin(current_url, location))
                     continue
                 if response.status_code != 200:
                     raise CandidateFetchError(f"Candidate returned HTTP {response.status_code}.")
@@ -193,7 +196,6 @@ async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> di
         }
 
 
-
 def _extract_candidate_html(raw: bytes) -> tuple[str, str]:
     soup = BeautifulSoup(raw, "html.parser")
     title = soup.title.get_text(" ", strip=True) if soup.title else ""
@@ -207,11 +209,11 @@ def _extract_candidate_html(raw: bytes) -> tuple[str, str]:
             blocks.append(text)
         if sum(len(item) + 1 for item in blocks) >= MAX_TEXT_CHARS:
             break
-    return "\\n".join(blocks)[:MAX_TEXT_CHARS], title
+    return "\n".join(blocks)[:MAX_TEXT_CHARS], title
 
 
 async def fetch_candidate_pages(candidates: list[dict]) -> list[dict]:
-    """Fetch at most five candidates, two concurrently; failures remain inspectable."""
+    """Fetch candidates and attach a non-approving, risk-based processing decision."""
     bounded = list(candidates[:MAX_CANDIDATES])
     if not bounded:
         return []
@@ -225,4 +227,16 @@ async def fetch_candidate_pages(candidates: list[dict]) -> list[dict]:
         async def limited(candidate: dict) -> dict:
             async with semaphore:
                 return await _fetch_one_candidate(client, candidate)
-        return await asyncio.gather(*(limited(item) for item in bounded))
+
+        results = await asyncio.gather(*(limited(item) for item in bounded))
+
+    evaluated: list[dict] = []
+    for result in results:
+        decision = evaluate_candidate_policy(result)
+        evaluated.append({
+            **result,
+            "discovery_policy_action": decision.action,
+            "discovery_policy_reason": decision.reason,
+            "configured_seed_host": decision.trusted_host,
+        })
+    return evaluated
