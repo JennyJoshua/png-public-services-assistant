@@ -5,6 +5,7 @@ Candidate pages are never added to the approved source registry or answer cache.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import ipaddress
 import socket
 from datetime import datetime, timezone
@@ -158,8 +159,8 @@ async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> di
             snippet = candidate.get("snippet")
             if not isinstance(snippet, str) or not snippet.strip():
                 snippet = None
-            candidate_id = __import__("hashlib").sha256(
-                f"{provider}\\n{original_url}".encode("utf-8")
+            candidate_id = hashlib.sha256(
+                f"{provider}\n{original_url}".encode("utf-8")
             ).hexdigest()[:24]
             return {
                 "candidate_id": candidate_id,
