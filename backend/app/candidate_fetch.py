@@ -145,14 +145,36 @@ async def _fetch_one_candidate(client: httpx.AsyncClient, candidate: dict) -> di
             text, page_title = _extract_candidate_html(bytes(raw))
             if len(text) < 80:
                 raise CandidateFetchError("Candidate page contains insufficient extractable text.")
+            retrieved_at = datetime.now(timezone.utc).isoformat()
+            provider = str(candidate.get("provider") or "unspecified").strip()[:80]
+            raw_rank = candidate.get("rank")
+            rank = raw_rank if isinstance(raw_rank, int) and not isinstance(raw_rank, bool) and raw_rank >= 1 else None
+            provider_result_id = candidate.get("provider_result_id")
+            if not isinstance(provider_result_id, str) or not provider_result_id.strip():
+                provider_result_id = None
+            publication_date = candidate.get("publication_date")
+            if not isinstance(publication_date, str) or not publication_date.strip():
+                publication_date = None
+            snippet = candidate.get("snippet")
+            if not isinstance(snippet, str) or not snippet.strip():
+                snippet = None
+            candidate_id = __import__("hashlib").sha256(
+                f"{provider}\\n{original_url}".encode("utf-8")
+            ).hexdigest()[:24]
             return {
+                "candidate_id": candidate_id,
                 "title": page_title or str(candidate.get("title") or "Untitled candidate")[:200],
+                "provider_title": str(candidate.get("title") or "")[:200] or None,
+                "snippet": snippet[:1000] if snippet else None,
                 "url": original_url,
+                "canonical_url": original_url,
                 "final_url": current_url,
-                "domain": host,
-                "provider": str(candidate.get("provider") or "unspecified")[:80],
-                "rank": candidate.get("rank"),
-                "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                "domain": (urlsplit(current_url).hostname or "").lower(),
+                "provider": provider,
+                "provider_result_id": provider_result_id[:200] if provider_result_id else None,
+                "rank": rank,
+                "publication_date": publication_date[:100] if publication_date else None,
+                "retrieved_at": retrieved_at,
                 "content_type": content_type,
                 "text": text,
                 "status": "candidate_unreviewed",
