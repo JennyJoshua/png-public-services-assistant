@@ -21,7 +21,7 @@ def test_candidate_url_requires_clean_https_and_standard_port():
 
 
 def test_candidate_dns_rejects_non_public_addresses(monkeypatch):
-    async def fake_getaddrinfo(host, port, type):
+    def fake_getaddrinfo(host, port, type):
         return [(None, None, None, None, ("10.0.0.5", 443))]
     monkeypatch.setattr(candidate_fetch.socket, "getaddrinfo", fake_getaddrinfo)
     with pytest.raises(candidate_fetch.CandidateFetchError, match="non-public"):
@@ -29,7 +29,7 @@ def test_candidate_dns_rejects_non_public_addresses(monkeypatch):
 
 
 def test_candidate_dns_accepts_public_addresses(monkeypatch):
-    async def fake_getaddrinfo(host, port, type):
+    def fake_getaddrinfo(host, port, type):
         return [(None, None, None, None, ("93.184.216.34", 443))]
     monkeypatch.setattr(candidate_fetch.socket, "getaddrinfo", fake_getaddrinfo)
     asyncio.run(candidate_fetch._resolve_public_host("example.org"))
