@@ -87,7 +87,6 @@ async def _get_pool() -> AsyncConnectionPool:
                 open=False,
                 kwargs={"sslmode": "require", "connect_timeout": 10},
                 name="png-public-services-source-store",
-                check=AsyncConnectionPool.check_connection,
             )
             try:
                 await pool.open(wait=True)
