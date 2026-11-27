@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Iterable
 from urllib.parse import urlsplit
 
@@ -62,7 +63,12 @@ class CrossDocumentVerification:
 
 
 def _parse_date(value: str) -> date | None:
-    value = value.strip().replace(",", "")
+    raw_value = value.strip()
+    try:
+        return parsedate_to_datetime(raw_value).date()
+    except (TypeError, ValueError, OverflowError):
+        pass
+    value = raw_value.replace(",", "")
     for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y", "%B %d %Y"):
         try:
             return datetime.strptime(value, fmt).date()
