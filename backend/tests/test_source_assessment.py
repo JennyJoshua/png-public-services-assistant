@@ -30,6 +30,7 @@ def candidate(**changes):
         "fetched_at": NOW,
         "currentness_verified": True,
         "scope_statement": "PNG national identity registration information for applicants.",
+        "conflict_check_completed": True,
     }
     values.update(changes)
     return AssessmentInput(**values)
@@ -104,6 +105,12 @@ def test_confidence_does_not_override_failed_hard_gate():
     decision = assess_source(candidate(currentness_verified=False))
     assert decision.confidence > 0.8
     assert decision.action is AssessmentAction.HOLD
+
+
+def test_activation_requires_a_completed_conflict_check():
+    decision = assess_source(candidate(conflict_check_completed=False))
+    assert decision.action is AssessmentAction.HOLD
+    assert not decision.hard_gates["no_unresolved_conflict_or_supersession"]
 
 
 def test_legacy_ica_domain_is_not_treated_as_current_authority():
