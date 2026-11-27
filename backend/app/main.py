@@ -14,6 +14,11 @@ from pydantic import BaseModel, Field
 
 from app.rag import retrieve_answer
 from app.source_content import get_sources_status, refresh_loop, refresh_sources
+from app.source_store import (
+    close_source_store,
+    database_source_store_enabled,
+    fetch_active_source_pages,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +84,16 @@ class ChatRequest(BaseModel):
 
 @app.on_event("startup")
 async def start_source_refresh() -> None:
-    """Warm the in-memory cache at startup and refresh it best-effort every 24 hours."""
+    """Use durable approved versions when configured; otherwise warm the legacy cache."""
+    if database_source_store_enabled():
+        try:
+            pages = await fetch_active_source_pages()
+            logger.info("Durable source store ready; %s active evidence pages available.", len(pages))
+        except Exception:
+            # Keep the API available but fail closed: retrieval returns no evidence.
+            logger.exception("Durable source store unavailable at startup; retrieval will fail closed.")
+        return
+
     try:
         await refresh_sources()
     except Exception:
@@ -97,6 +111,7 @@ async def stop_source_refresh() -> None:
             await task
         except asyncio.CancelledError:
             pass
+    await close_source_store()
 
 
 @app.get("/api/v1/health", tags=["system"])
