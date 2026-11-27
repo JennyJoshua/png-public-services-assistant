@@ -62,13 +62,40 @@ def page_to_fetched_document(page: dict) -> FetchedDocument:
     text = str(page["text"])
     content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
 
-    # Being on the curated fetch allowlist is not the same as having completed
-    # source verification. Preserve the registry's status and all unknown facts.
+    # The private database row is the live governance authority when present.
+    # The registered URL must still match the code-owned exact seed list.
+    if str(page.get("institution", "")) != registered.institution:
+        raise RetrievalContractError("Database source institution does not match the configured registry.")
+    if str(page.get("topic", "")) != registered.title:
+        raise RetrievalContractError("Database source topic does not match the configured registry.")
+
+    database_class = page.get("_registry_source_class")
+    database_status = page.get("_registry_status")
+    if database_class is not None or database_status is not None:
+        class_map = {
+            "approved_authoritative": SourceClass.APPROVED_AUTHORITATIVE,
+            "recognised_institutional": SourceClass.RECOGNISED_INSTITUTIONAL,
+            "general_web": SourceClass.GENERAL_WEB,
+            "unverified_unsafe": SourceClass.UNVERIFIED_UNSAFE,
+        }
+        source_class = class_map.get(str(database_class))
+        if source_class is None:
+            raise RetrievalContractError("Database source has an unknown evidence classification.")
+        try:
+            source_status = SourceStatus(str(database_status))
+        except ValueError as exc:
+            raise RetrievalContractError("Database source has an unknown lifecycle status.") from exc
+    else:
+        # The in-memory seed list carries no approved class and remains fail-closed.
+        source_class = None
+        source_status = SourceStatus(registered.status)
+
     source = SourceRecord(
         institution=registered.institution,
         title=registered.title,
         url=registered.url,
-        status=SourceStatus(registered.status),
+        source_class=source_class,
+        status=source_status,
         authority_tier=registered.authority_tier,
         document_type=registered.document_type,
         jurisdiction=registered.jurisdiction,
