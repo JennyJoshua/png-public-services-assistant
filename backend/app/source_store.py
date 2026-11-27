@@ -127,9 +127,10 @@ async def fetch_active_source_pages() -> list[dict[str, Any]]:
     try:
         pool = await _get_pool()
         async with pool.connection(timeout=10) as connection:
-            cursor = await connection.execute(_ACTIVE_PAGES_SQL)
-            rows = await cursor.fetchall()
-        return [row_to_page(dict(row)) for row in rows]
+            async with connection.cursor(row_factory=dict_row) as cursor:
+                await cursor.execute(_ACTIVE_PAGES_SQL)
+                rows = await cursor.fetchall()
+        return [row_to_page(row) for row in rows]
     except SourceStoreError:
         raise
     except Exception as exc:
