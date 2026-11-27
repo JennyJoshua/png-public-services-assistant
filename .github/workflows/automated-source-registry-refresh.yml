@@ -43,7 +43,7 @@ jobs:
             {
               echo "## Source registry refresh"
               echo ""
-              echo "Skipped: repository secret `SUPABASE_DATABASE_URL` has not been configured."
+              echo "Skipped: repository secret SUPABASE_DATABASE_URL has not been configured."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
