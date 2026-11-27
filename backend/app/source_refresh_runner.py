@@ -12,15 +12,20 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from app.source_assessment import AssessmentInput, AssessmentAction, assess_source
-from app.source_verification import verify_temporal_signals
+from app.source_verification import (
+    verify_cross_document_consistency,
+    verify_temporal_signals,
+)
 from app.source_content import USER_AGENT, _fetch_one
-from app.source_registry import SOURCES
+from app.source_instrument_registry import VERIFICATION_PLANS
+from app.source_registry import SOURCES, Source
 from app.source_store import SourceStoreError, get_source_pool
 
 logger = logging.getLogger(__name__)
@@ -76,7 +81,90 @@ def _scope_statement(institution: str, topic: str) -> str:
     )
 
 
-def _build_assessment(source: Any, page: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+async def _fetch_source_verification_documents(
+    source: Any,
+    primary_page: dict[str, Any],
+) -> dict[str, Any]:
+    """Fetch only exact URLs in the source's reviewed verification plan."""
+    plan = VERIFICATION_PLANS.get(source.url)
+    if plan is None:
+        return {
+            "controlling_instrument_verified": False,
+            "corroborating_official_sources": (),
+            "conflict_check_completed": False,
+            "unresolved_conflict": False,
+            "compared_urls": (),
+            "conflicts": (),
+            "reason": "No exact controlling/corroborating document plan is configured.",
+        }
+
+    timeout = httpx.Timeout(12.0, connect=5.0)
+    limits = httpx.Limits(
+        max_connections=MAX_FETCH_CONCURRENCY,
+        max_keepalive_connections=MAX_FETCH_CONCURRENCY,
+    )
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/pdf;q=0.9,*/*;q=0.5",
+    }
+    documents: list[tuple[str, str]] = []
+    corroborating_urls: list[str] = []
+    controlling_verified = False
+    fetch_errors: list[str] = []
+
+    async with httpx.AsyncClient(
+        timeout=timeout, limits=limits, headers=headers,
+        follow_redirects=True, max_redirects=5,
+    ) as client:
+        for specification in plan.documents:
+            instrument_source = Source(
+                institution=source.institution,
+                title=specification.url,
+                url=specification.url,
+            )
+            page, status = await _fetch_one(client, instrument_source)
+            if page is None:
+                fetch_errors.append(f"{specification.url}: {status.get('error', 'fetch failed')}")
+                continue
+            final = urlsplit(str(page.get("final_url") or ""))
+            if final.scheme != "https" or (final.hostname or "").lower() not in plan.authority_hosts:
+                fetch_errors.append(f"{specification.url}: final URL left the exact authority host set")
+                continue
+            text_value = str(page.get("text") or "")
+            normalized = " ".join(text_value.lower().split())
+            if not all(term.lower() in normalized for term in specification.required_terms):
+                fetch_errors.append(f"{specification.url}: required instrument identity terms missing")
+                continue
+            documents.append((specification.url, text_value))
+            if specification.role == "controlling_instrument":
+                controlling_verified = True
+            elif specification.role == "corroborating_source":
+                corroborating_urls.append(specification.url)
+
+    consistency = verify_cross_document_consistency(
+        source.url,
+        str(primary_page.get("text") or ""),
+        documents,
+        expected_hosts=plan.authority_hosts,
+    )
+    return {
+        "controlling_instrument_verified": controlling_verified,
+        "corroborating_official_sources": tuple(corroborating_urls),
+        "conflict_check_completed": consistency.completed,
+        "unresolved_conflict": consistency.unresolved_conflict,
+        "compared_urls": consistency.compared_urls,
+        "conflicts": consistency.conflicts,
+        "reason": consistency.reason,
+        "fetch_errors": tuple(fetch_errors),
+    }
+
+
+def _build_assessment(
+    source: Any,
+    page: dict[str, Any],
+    verification: dict[str, Any] | None = None,
+) -> tuple[Any, dict[str, Any]]:
+    verification = verification or {}
     fetched_at = _parse_timestamp(str(page["last_checked_at"]))
     scope = _scope_statement(source.institution, source.title)
     temporal = verify_temporal_signals(
@@ -98,12 +186,13 @@ def _build_assessment(source: Any, page: dict[str, Any]) -> tuple[Any, dict[str,
         # deterministically. This does not prove legal validity.
         currentness_verified=temporal.currentness_signal,
         scope_statement=scope,
-        controlling_instrument_verified=False,
-        corroborating_official_sources=(),
-        # Cross-document conflict checking remains incomplete until a
-        # configured controlling/corroborating instrument has actually been fetched.
-        conflict_check_completed=False,
-        unresolved_conflict=temporal.explicit_conflict_signal,
+        controlling_instrument_verified=bool(verification.get("controlling_instrument_verified")),
+        corroborating_official_sources=tuple(verification.get("corroborating_official_sources", ())),
+        conflict_check_completed=bool(verification.get("conflict_check_completed")),
+        unresolved_conflict=(
+            temporal.explicit_conflict_signal
+            or bool(verification.get("unresolved_conflict"))
+        ),
         superseded=temporal.superseded,
     )
     audit_input = {
@@ -120,11 +209,17 @@ def _build_assessment(source: Any, page: dict[str, Any]) -> tuple[Any, dict[str,
         "currentness_verified": temporal.currentness_signal,
         "temporal_verification_reasons": list(temporal.reasons),
         "scope_statement": scope,
-        "controlling_instrument_verified": False,
-        "corroborating_official_sources": [],
-        "conflict_check_completed": False,
-        "cross_document_check_reason": "No controlling/corroborating instrument fetch is configured yet.",
-        "unresolved_conflict": temporal.explicit_conflict_signal,
+        "controlling_instrument_verified": bool(verification.get("controlling_instrument_verified")),
+        "corroborating_official_sources": list(verification.get("corroborating_official_sources", ())),
+        "conflict_check_completed": bool(verification.get("conflict_check_completed")),
+        "compared_document_urls": list(verification.get("compared_urls", ())),
+        "cross_document_conflicts": list(verification.get("conflicts", ())),
+        "cross_document_check_reason": verification.get("reason", "No exact verification plan configured."),
+        "verification_fetch_errors": list(verification.get("fetch_errors", ())),
+        "unresolved_conflict": (
+            temporal.explicit_conflict_signal
+            or bool(verification.get("unresolved_conflict"))
+        ),
         "superseded": temporal.superseded,
     }
     return assess_source(assessment_input), audit_input
@@ -610,7 +705,8 @@ async def run_source_refresh(
                 continue
 
             counts["fetched_count"] += 1
-            decision, audit_input = _build_assessment(source, page)
+            verification = await _fetch_source_verification_documents(source, page)
+            decision, audit_input = _build_assessment(source, page, verification)
             outcome = await _persist_assessment(
                 pool,
                 source_row=source_row,
