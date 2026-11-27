@@ -28,9 +28,9 @@ _CONFLICT_MARKERS = (
 )
 _LABELLED_VALUES = re.compile(
     r"(?P<label>minimum age|age requirement|application deadline|deadline|"
-    r"valid for|validity|fee|fees|price|cost|threshold)\\s*"
-    r"(?:is|of|:|=)?\\s*(?P<value>(?:k\\s*)?\\d+(?:[.,]\\d+)?"
-    r"(?:\\s*(?:days?|months?|years?))?)",
+    r"valid for|validity|fee|fees|price|cost|threshold)\s*"
+    r"(?:is|of|:|=)?\s*(?P<value>(?:k\s*)?\d+(?:[.,]\d+)?"
+    r"(?:\s*(?:days?|months?|years?))?)",
     re.I,
 )
 _HIGH_IMPACT_MARKERS = re.compile(
