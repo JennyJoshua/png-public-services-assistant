@@ -25,7 +25,7 @@ This first runner does **not** claim that fetching an official-looking page prov
 
 The verification layer now adds deterministic temporal checks:
 
-- extracts explicit publication/issue and modified dates from page text;
+- extracts explicit publication/issue and modified dates from page text, HTML metadata, and HTTP Last-Modified headers;
 - checks whether the most recent explicit date is within a conservative five-year freshness window;
 - flags future-dated content;
 - detects explicit supersession, withdrawal, repeal, revocation, draft, and amendment/conflict markers; and
