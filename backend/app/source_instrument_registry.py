@@ -31,8 +31,8 @@ VERIFICATION_PLANS: dict[str, SourceVerificationPlan] = {
     # Rules PDF still contains references to a 2015 fees regulation, while the
     # RTA's current fee schedule page identifies the 2017 regulation. The
     # verifier must detect and hold this discrepancy rather than auto-approve it.
-    "https://www.rta.gov.pg/licences-approvals/driver-licensing/": SourceVerificationPlan(
-        source_url="https://www.rta.gov.pg/licences-approvals/driver-licensing/",
+    "https://rta.gov.pg/licences-approvals/driver-licensing/": SourceVerificationPlan(
+        source_url="https://rta.gov.pg/licences-approvals/driver-licensing/",
         authority_hosts=frozenset({"rta.gov.pg", "www.rta.gov.pg"}),
         documents=(
             VerificationDocument(
