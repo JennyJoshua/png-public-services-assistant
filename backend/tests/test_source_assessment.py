@@ -28,7 +28,7 @@ def candidate(**changes):
         "content_type": "text/html; charset=utf-8",
         "text": TEXT,
         "fetched_at": NOW,
-        "currentness_verified": True,
+        "class_a_currentness_verified": True,
         "scope_statement": "PNG national identity registration information for applicants.",
     }
     values.update(changes)
@@ -70,7 +70,7 @@ def test_high_impact_requirements_need_controlling_instrument_and_corroboration(
         text=TEXT + " Applicants must pay a fee of K10 and lodge the form by the deadline."
     ))
     assert decision.action is AssessmentAction.HOLD
-    assert not decision.hard_gates["high_impact_requirements_verified"]
+    assert not decision.hard_gates["class_a_high_impact_requirements_verified"]
 
     verified = assess_source(candidate(
         text=TEXT + " Applicants must pay a fee of K10 and lodge the form by the deadline.",
@@ -83,7 +83,7 @@ def test_high_impact_requirements_need_controlling_instrument_and_corroboration(
 def test_missing_currentness_evidence_holds_class_a_source():
     decision = assess_source(candidate(currentness_verified=False))
     assert decision.action is AssessmentAction.HOLD
-    assert not decision.hard_gates["currentness_verified"]
+    assert not decision.hard_gates["class_a_currentness_verified"]
 
 
 def test_unresolved_conflict_or_supersession_holds_source():
