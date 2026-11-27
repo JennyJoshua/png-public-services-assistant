@@ -74,6 +74,18 @@ def test_cross_document_check_records_exact_official_comparator():
     assert result.compared_urls == (url,)
 
 
+def test_cross_document_check_detects_labelled_fee_mismatch():
+    result = verify_cross_document_consistency(
+        "https://pngcir.gov.pg/service",
+        "The application fee is K10.",
+        (("https://pngcir.gov.pg/current-instrument", "The application fee is K20."),),
+        expected_hosts=frozenset({"pngcir.gov.pg"}),
+    )
+    assert result.completed is True
+    assert result.unresolved_conflict is True
+    assert any(item.startswith("labelled_value_mismatch:fee:") for item in result.conflicts)
+
+
 def test_high_impact_claim_detector():
     assert contains_high_impact_claims("Applicants must pay a fee of K10.")
     assert not contains_high_impact_claims("This page describes the agency's history.")
