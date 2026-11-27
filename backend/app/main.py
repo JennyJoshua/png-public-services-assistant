@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from app.rag import retrieve_answer
 from app.source_content import get_sources_status, refresh_loop, refresh_sources
 from app.source_store import (
+    SourceStoreError,
     close_source_store,
     database_source_store_enabled,
     fetch_active_source_pages,
@@ -85,7 +86,13 @@ class ChatRequest(BaseModel):
 @app.on_event("startup")
 async def start_source_refresh() -> None:
     """Use durable approved versions when configured; otherwise warm the legacy cache."""
-    if database_source_store_enabled():
+    try:
+        use_database = database_source_store_enabled()
+    except SourceStoreError:
+        logger.exception("Invalid source-store configuration; retrieval will fail closed.")
+        return
+
+    if use_database:
         try:
             pages = await fetch_active_source_pages()
             logger.info("Durable source store ready; %s active evidence pages available.", len(pages))
