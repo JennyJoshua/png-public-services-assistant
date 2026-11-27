@@ -64,7 +64,10 @@ def test_supplementary_source_is_not_activated_before_conflict_check():
         text=(
             "The digital government programme explains institutional progress "
             "and the development of public digital services in Papua New Guinea. "
-            "This article describes the programme and its implementation."
+            "This article describes the programme and its implementation. "
+            "It provides background about the agency's work, public-sector "
+            "technology projects, and the general direction of digital service "
+            "delivery for citizens and government institutions."
         ),
     )
 
