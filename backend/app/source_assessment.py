@@ -87,6 +87,7 @@ class AssessmentInput:
     scope_statement: str | None = None
     controlling_instrument_verified: bool = False
     corroborating_official_sources: tuple[str, ...] = ()
+    conflict_check_completed: bool = False
     unresolved_conflict: bool = False
     superseded: bool = False
 
@@ -146,7 +147,7 @@ def assess_source(candidate: AssessmentInput) -> AssessmentDecision:
         and candidate.fetched_at.utcoffset() is not None
     )
     scope_verified = bool(candidate.scope_statement and len(candidate.scope_statement.strip()) >= 20)
-    no_conflict = not candidate.unresolved_conflict and not candidate.superseded
+    no_conflict = candidate.conflict_check_completed and not candidate.unresolved_conflict and not candidate.superseded
     high_impact = bool(_HIGH_IMPACT.search(clean_text))
     high_impact_verified = (
         not high_impact
