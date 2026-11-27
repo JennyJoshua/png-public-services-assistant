@@ -95,6 +95,27 @@ def test_cross_document_check_detects_labelled_fee_mismatch():
     assert any(item.startswith("labelled_value_mismatch:fee:") for item in result.conflicts)
 
 
+def test_legal_instrument_year_mismatch_is_a_conflict():
+    result = verify_cross_document_consistency(
+        "https://rta.gov.pg/licences-approvals/driver-licensing/",
+        "Driver licensing fees are prescribed by the Road Traffic (Fees and Charges) Regulation 2017.",
+        (
+            (
+                "https://rta.gov.pg/pdfs/resources/legislation/rules/RTR_LicensingOfDrivers2017.pdf",
+                "This Rule refers to the Road Traffic (Fees and Charges) Regulation 2015.",
+            ),
+            (
+                "https://www.rta.gov.pg/licences-approvals/schedule-of-fees-from-1-june-2018/",
+                "Road Traffic (Fees and Charges) Regulation 2017 - Schedule 1.",
+            ),
+        ),
+        expected_hosts=frozenset({"rta.gov.pg", "www.rta.gov.pg"}),
+    )
+    assert result.completed is True
+    assert result.unresolved_conflict is True
+    assert any(item.startswith("legal_instrument_year_mismatch:") for item in result.conflicts)
+
+
 def test_high_impact_claim_detector():
     assert contains_high_impact_claims("Applicants must pay a fee of K10.")
     assert not contains_high_impact_claims("This page describes the agency's history.")
