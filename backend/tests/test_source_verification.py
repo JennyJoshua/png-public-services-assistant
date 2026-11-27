@@ -18,6 +18,15 @@ def test_extracts_explicit_publication_and_modified_dates():
     assert modified.isoformat() == "2026-10-15"
 
 
+def test_http_last_modified_header_is_parsed_as_freshness_metadata():
+    published, modified = extract_document_dates(
+        "",
+        {"last-modified": "Fri, 27 Nov 2026 00:00:00 GMT"},
+    )
+    assert published is None
+    assert modified.isoformat() == "2026-11-27"
+
+
 def test_missing_date_does_not_claim_currentness():
     result = verify_temporal_signals("A public service page without a date.", fetched_at=NOW)
     assert result.currentness_signal is False
