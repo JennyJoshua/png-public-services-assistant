@@ -35,9 +35,8 @@ _LABELLED_VALUES = re.compile(
     re.I,
 )
 _LEGAL_CITATION = re.compile(
-    r"(?P<title>[A-Z][A-Za-z0-9&'()/,\-\s]{3,100}?\b(?:Act|Regulation|Rules))"
-    r"\s+(?P<year>(?:19|20)\d{2})",
-    re.I,
+    r"(?P<title>\b[A-Z][A-Za-z0-9&'-]*(?:\s+(?:[A-Z][A-Za-z0-9&'-]*|of|and|the|for|on|in|to|\(|\))){0,10}"
+    r"\s+(?:Act|Regulation|Rules))\s+(?P<year>(?:19|20)\d{2})"
 )
 _HIGH_IMPACT_MARKERS = re.compile(
     r"\b(fee|fees|price|cost|eligibility|eligible|deadline|due date|"
