@@ -191,7 +191,7 @@ def verify_cross_document_consistency(
         host = (candidate.hostname or "").lower()
         if candidate.scheme != "https" or host not in expected_hosts or not text.strip():
             continue
-        documents.append((url, " ".join(text.lower().split())))
+        documents.append((url, text))
 
     if not documents:
         return CrossDocumentVerification(
@@ -207,10 +207,11 @@ def verify_cross_document_consistency(
     if any(marker in primary for marker in _CONFLICT_MARKERS):
         conflicts.append("primary_document_contains_conflict_marker")
     all_legal_references: list[tuple[str, dict[str, set[str]]]] = [
-        ("primary", _extract_legal_references(primary))
+        ("primary", _extract_legal_references(primary_text))
     ]
     all_legal_references.extend(
-        (url, _extract_legal_references(other)) for url, other in documents
+        (url, _extract_legal_references(other_text))
+        for url, other_text in documents
     )
     for index, (left_url, left_refs) in enumerate(all_legal_references):
         for right_url, right_refs in all_legal_references[index + 1:]:
@@ -225,7 +226,8 @@ def verify_cross_document_consistency(
         match.group("label").lower(): match.group("value").replace(" ", "")
         for match in _LABELLED_VALUES.finditer(primary)
     }
-    for url, other in documents:
+    for url, other_text in documents:
+        other = " ".join(other_text.lower().split())
         if any(marker in other for marker in _SUPERSESSION_MARKERS):
             conflicts.append(f"corroborating_document_supersession:{url}")
         if any(marker in other for marker in _CONFLICT_MARKERS):
