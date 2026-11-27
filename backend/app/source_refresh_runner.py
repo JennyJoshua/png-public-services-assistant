@@ -12,7 +12,6 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from urllib.parse import urlsplit
 
 import httpx
 from psycopg.rows import dict_row
