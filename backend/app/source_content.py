@@ -14,6 +14,11 @@ from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 from app.source_registry import SOURCES
+from app.source_store import (
+    SourceStoreError,
+    database_source_store_enabled,
+    fetch_active_source_pages,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +265,19 @@ async def refresh_sources(*, force: bool = True) -> dict:
 
 
 async def get_source_pages() -> list[dict]:
+    try:
+        use_database = database_source_store_enabled()
+    except SourceStoreError:
+        logger.exception("Invalid durable source-store configuration; returning no evidence.")
+        return []
+    if use_database:
+        try:
+            # No in-memory fallback in database mode: a DB outage must not expose
+            # stale or unreviewed content from the old process-local cache.
+            return await fetch_active_source_pages()
+        except SourceStoreError:
+            logger.exception("Durable source store unavailable; returning no evidence.")
+            return []
     try:
         if _LAST_REFRESH is None:
             await refresh_sources()
