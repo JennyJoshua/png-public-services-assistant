@@ -124,12 +124,14 @@ def row_to_page(row: dict[str, Any]) -> dict[str, Any]:
 
 async def fetch_active_source_pages() -> list[dict[str, Any]]:
     """Return only accepted versions currently pointed to by active registry rows."""
-    pool = await _get_pool()
     try:
+        pool = await _get_pool()
         async with pool.connection(timeout=10) as connection:
             cursor = await connection.execute(_ACTIVE_PAGES_SQL)
             rows = await cursor.fetchall()
         return [row_to_page(dict(row)) for row in rows]
+    except SourceStoreError:
+        raise
     except Exception as exc:
         raise SourceStoreError("Unable to read active source versions from Supabase.") from exc
 
