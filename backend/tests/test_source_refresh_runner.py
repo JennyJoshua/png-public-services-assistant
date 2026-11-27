@@ -78,6 +78,41 @@ def test_supplementary_source_is_not_activated_before_conflict_check():
     assert decision.hard_gates["no_unresolved_conflict_or_supersession"] is False
 
 
+def test_rta_source_requires_real_instrument_and_conflict_evidence():
+    from app.source_assessment import AssessmentAction
+    from app.source_instrument_registry import VERIFICATION_PLANS
+
+    source = next(item for item in SOURCES if item.institution == "RTA")
+    assert source.url in VERIFICATION_PLANS
+    plan = VERIFICATION_PLANS[source.url]
+    assert len(plan.documents) == 2
+
+    candidate_page = page(
+        final_url=source.url,
+        text=(
+            "Published on 2026-10-01. Driver licensing applicants must pay the "
+            "fee prescribed by the Road Traffic (Fees and Charges) Regulation 2017. "
+            "This page explains the licensing process and eligibility requirements."
+        ),
+    )
+    verification = {
+        "controlling_instrument_verified": True,
+        "corroborating_official_sources": (plan.documents[1].url,),
+        "conflict_check_completed": True,
+        "unresolved_conflict": True,
+        "compared_urls": tuple(document.url for document in plan.documents),
+        "conflicts": ("legal_instrument_year_mismatch:road traffic fees and charges regulation:2015,2017",),
+        "reason": "official documents contain conflicting regulation years",
+    }
+
+    decision, audit = _build_assessment(source, candidate_page, verification)
+
+    assert decision.action is AssessmentAction.HOLD
+    assert decision.hard_gates["no_unresolved_conflict_or_supersession"] is False
+    assert audit["controlling_instrument_verified"] is True
+    assert audit["cross_document_conflicts"]
+
+
 def test_refresh_timestamp_must_include_timezone():
     with pytest.raises(ValueError, match="timezone"):
         _parse_timestamp("2026-11-27T07:00:00")

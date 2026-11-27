@@ -157,7 +157,21 @@ def _redirect_is_allowed(original_url: str, final_url: str) -> bool:
 
 async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, dict]:
     attempted_at = datetime.now(timezone.utc).isoformat()
-    status = dict(_STATUS[source.url])
+    status = dict(_STATUS.get(source.url, {
+        "url": source.url,
+        "agency": source.institution,
+        "topic": source.title,
+        "last_attempt_at": None,
+        "last_success_at": None,
+        "http_status": None,
+        "final_url": None,
+        "fetch_succeeded": False,
+        "usable_text": False,
+        "text_chars": 0,
+        "cached": False,
+        "error": "Not fetched yet",
+        "content_hash": None,
+    }))
     status.update({
         "last_attempt_at": attempted_at,
         "fetch_succeeded": False,

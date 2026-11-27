@@ -34,6 +34,10 @@ _LABELLED_VALUES = re.compile(
     r"(?:\s*(?:days?|months?|years?))?)",
     re.I,
 )
+_LEGAL_CITATION = re.compile(
+    r"(?P<title>(?:[A-Z][A-Za-z0-9&'-]*\s+){1,5}(?:\([A-Z][A-Za-z0-9&' -]*\)\s*)?\b(?:Act|Regulation|Rules))"
+    r"\s+(?P<year>(?:19|20)\d{2})"
+)
 _HIGH_IMPACT_MARKERS = re.compile(
     r"\b(fee|fees|price|cost|eligibility|eligible|deadline|due date|"
     r"effective date|commencement|penalty|fine|threshold|must submit|"
@@ -155,6 +159,16 @@ def verify_temporal_signals(
     )
 
 
+def _extract_legal_references(text: str) -> dict[str, set[str]]:
+    """Extract named PNG legal instruments and their cited years."""
+    references: dict[str, set[str]] = {}
+    for match in _LEGAL_CITATION.finditer(text):
+        title = re.sub(r"[^a-z0-9]+", " ", match.group("title").lower()).strip()
+        if title:
+            references.setdefault(title, set()).add(match.group("year"))
+    return references
+
+
 def verify_cross_document_consistency(
     primary_url: str,
     primary_text: str,
@@ -177,7 +191,7 @@ def verify_cross_document_consistency(
         host = (candidate.hostname or "").lower()
         if candidate.scheme != "https" or host not in expected_hosts or not text.strip():
             continue
-        documents.append((url, " ".join(text.lower().split())))
+        documents.append((url, text))
 
     if not documents:
         return CrossDocumentVerification(
@@ -192,11 +206,28 @@ def verify_cross_document_consistency(
         conflicts.append("primary_document_contains_supersession_marker")
     if any(marker in primary for marker in _CONFLICT_MARKERS):
         conflicts.append("primary_document_contains_conflict_marker")
+    all_legal_references: list[tuple[str, dict[str, set[str]]]] = [
+        ("primary", _extract_legal_references(primary_text))
+    ]
+    all_legal_references.extend(
+        (url, _extract_legal_references(other_text))
+        for url, other_text in documents
+    )
+    for index, (left_url, left_refs) in enumerate(all_legal_references):
+        for right_url, right_refs in all_legal_references[index + 1:]:
+            for title in left_refs.keys() & right_refs.keys():
+                years = left_refs[title] | right_refs[title]
+                if len(years) > 1:
+                    conflicts.append(
+                        f"legal_instrument_year_mismatch:{title}:{','.join(sorted(years))}"
+                    )
+
     primary_values = {
         match.group("label").lower(): match.group("value").replace(" ", "")
         for match in _LABELLED_VALUES.finditer(primary)
     }
-    for url, other in documents:
+    for url, other_text in documents:
+        other = " ".join(other_text.lower().split())
         if any(marker in other for marker in _SUPERSESSION_MARKERS):
             conflicts.append(f"corroborating_document_supersession:{url}")
         if any(marker in other for marker in _CONFLICT_MARKERS):
