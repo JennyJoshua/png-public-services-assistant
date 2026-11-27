@@ -165,8 +165,16 @@ def assess_source(candidate: AssessmentInput) -> AssessmentDecision:
         "timezone_aware_fetch_timestamp": timestamp_valid,
         "explicit_scope": scope_verified,
         "no_unresolved_conflict_or_supersession": no_conflict,
-        "currentness_verified": candidate.currentness_verified,
-        "high_impact_requirements_verified": high_impact_verified,
+        # These two gates are mandatory for Class A, but not for B/C sources
+        # whose use is restricted to supporting or supplementary context.
+        "class_a_currentness_verified": (
+            profile is not None
+            and profile.maximum_class is not SourceClass.APPROVED_AUTHORITATIVE
+        ) or candidate.currentness_verified,
+        "class_a_high_impact_requirements_verified": (
+            profile is not None
+            and profile.maximum_class is not SourceClass.APPROVED_AUTHORITATIVE
+        ) or high_impact_verified,
     }
     passed = sum(gates.values())
     confidence = round(passed / len(gates), 2)
