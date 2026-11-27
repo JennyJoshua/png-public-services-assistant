@@ -135,3 +135,18 @@ def test_official_news_domain_is_limited_to_supplementary_context():
     ))
     assert decision.action is AssessmentAction.ACTIVATE
     assert decision.source_class is SourceClass.GENERAL_WEB
+
+
+def test_class_c_source_with_high_impact_claims_is_held():
+    decision = assess_source(candidate(
+        registered_url="https://ict.gov.pg/a-digital-leap",
+        final_url="https://ict.gov.pg/a-digital-leap",
+        registered_institution="DICT",
+        registered_topic="e-Government portal progress",
+        text=TEXT + " Applicants must pay a fee of K10 to apply.",
+        currentness_verified=False,
+        scope_statement="Institutional progress reporting about digital government.",
+    ))
+    assert decision.action is AssessmentAction.HOLD
+    assert decision.source_class is SourceClass.UNVERIFIED_UNSAFE
+    assert not decision.hard_gates["class_c_context_only"]
