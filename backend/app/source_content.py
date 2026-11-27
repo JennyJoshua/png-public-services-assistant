@@ -197,7 +197,7 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
             text, title = _extract_pdf(raw)
         elif "text/html" in content_type or "application/xhtml" in content_type:
             text, title = _extract_html(raw)
-            metadata = _extract_html_metadata(raw)
+            metadata.update(_extract_html_metadata(raw))
         else:
             raise ValueError(f"Unsupported content type: {content_type or 'missing'}")
         if len(text) < 40:
