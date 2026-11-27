@@ -28,7 +28,7 @@ def candidate(**changes):
         "content_type": "text/html; charset=utf-8",
         "text": TEXT,
         "fetched_at": NOW,
-        "class_a_currentness_verified": True,
+        "currentness_verified": True,
         "scope_statement": "PNG national identity registration information for applicants.",
     }
     values.update(changes)
