@@ -265,7 +265,12 @@ async def refresh_sources(*, force: bool = True) -> dict:
 
 
 async def get_source_pages() -> list[dict]:
-    if database_source_store_enabled():
+    try:
+        use_database = database_source_store_enabled()
+    except SourceStoreError:
+        logger.exception("Invalid durable source-store configuration; returning no evidence.")
+        return []
+    if use_database:
         try:
             # No in-memory fallback in database mode: a DB outage must not expose
             # stale or unreviewed content from the old process-local cache.
