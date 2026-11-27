@@ -26,6 +26,13 @@ _CONFLICT_MARKERS = (
     "inconsistent with", "conflicts with", "contrary to", "different from",
     "subject to amendment", "pending amendment",
 )
+_LABELLED_VALUES = re.compile(
+    r"(?P<label>minimum age|age requirement|application deadline|deadline|"
+    r"valid for|validity|fee|fees|price|cost|threshold)\\s*"
+    r"(?:is|of|:|=)?\\s*(?P<value>(?:k\\s*)?\\d+(?:[.,]\\d+)?"
+    r"(?:\\s*(?:days?|months?|years?))?)",
+    re.I,
+)
 _HIGH_IMPACT_MARKERS = re.compile(
     r"\b(fee|fees|price|cost|eligibility|eligible|deadline|due date|"
     r"effective date|commencement|penalty|fine|threshold|must submit|"
@@ -173,17 +180,28 @@ def verify_cross_document_consistency(
 
     primary = " ".join(primary_text.lower().split())
     # Detect explicit contradictions/withdrawal notices and compare repeated
-    # numeric/date claims only where both documents state the same labelled field.
+    # labelled numeric claims only where both documents state the same field.
     conflicts: list[str] = []
     if any(marker in primary for marker in _SUPERSESSION_MARKERS):
         conflicts.append("primary_document_contains_supersession_marker")
     if any(marker in primary for marker in _CONFLICT_MARKERS):
         conflicts.append("primary_document_contains_conflict_marker")
+    primary_values = {
+        match.group("label").lower(): match.group("value").replace(" ", "")
+        for match in _LABELLED_VALUES.finditer(primary)
+    }
     for url, other in documents:
         if any(marker in other for marker in _SUPERSESSION_MARKERS):
             conflicts.append(f"corroborating_document_supersession:{url}")
         if any(marker in other for marker in _CONFLICT_MARKERS):
             conflicts.append(f"corroborating_document_conflict_marker:{url}")
+        other_values = {
+            match.group("label").lower(): match.group("value").replace(" ", "")
+            for match in _LABELLED_VALUES.finditer(other)
+        }
+        for label in primary_values.keys() & other_values.keys():
+            if primary_values[label] != other_values[label]:
+                conflicts.append(f"labelled_value_mismatch:{label}:{url}")
     return CrossDocumentVerification(
         completed=True,
         unresolved_conflict=bool(conflicts),
