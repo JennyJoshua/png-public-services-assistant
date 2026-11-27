@@ -73,7 +73,7 @@ def _database_url() -> str:
     return value
 
 
-async def _get_pool() -> AsyncConnectionPool:
+async def get_source_pool() -> AsyncConnectionPool:
     global _POOL
     if _POOL is not None:
         return _POOL
@@ -125,7 +125,7 @@ def row_to_page(row: dict[str, Any]) -> dict[str, Any]:
 async def fetch_active_source_pages() -> list[dict[str, Any]]:
     """Return only accepted versions currently pointed to by active registry rows."""
     try:
-        pool = await _get_pool()
+        pool = await get_source_pool()
         async with pool.connection(timeout=10) as connection:
             async with connection.cursor(row_factory=dict_row) as cursor:
                 await cursor.execute(_ACTIVE_PAGES_SQL)
