@@ -68,14 +68,13 @@ def page_to_fetched_document(page: dict) -> FetchedDocument:
 
     # The private database row is the live governance authority when present.
     # The registered URL must still match the code-owned exact seed list.
-    if str(page.get("institution", "")) != registered.institution:
-        raise RetrievalContractError("Database source institution does not match the configured registry.")
-    if str(page.get("topic", "")) != registered.title:
-        raise RetrievalContractError("Database source topic does not match the configured registry.")
-
     database_class = page.get("_registry_source_class")
     database_status = page.get("_registry_status")
     if database_class is not None or database_status is not None:
+        if str(page.get("institution", "")) != registered.institution:
+            raise RetrievalContractError("Database source institution does not match the configured registry.")
+        if str(page.get("topic", "")) != registered.title:
+            raise RetrievalContractError("Database source topic does not match the configured registry.")
         class_map = {
             "approved_authoritative": SourceClass.APPROVED_AUTHORITATIVE,
             "recognised_institutional": SourceClass.RECOGNISED_INSTITUTIONAL,
