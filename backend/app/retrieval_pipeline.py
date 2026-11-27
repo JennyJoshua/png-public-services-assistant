@@ -17,6 +17,7 @@ from app.retrieval_contracts import (
     RetrievalContractError,
     SourceRecord,
     SourceStatus,
+    is_eligible_for_answer,
 )
 from app.source_registry import SOURCES
 
@@ -118,3 +119,20 @@ def build_evidence_records(
             publication_date=document.publication_date,
         ))
     return records
+
+
+def filter_eligible_source_pages(pages: Sequence[dict]) -> tuple[list[dict], list[FetchedDocument]]:
+    """Keep only pages whose registered source is active and classified for answer use.
+
+    Fetch success and allowlist membership do not confer authority. Unknown,
+    pending, broken, superseded, or unclassified sources fail closed.
+    """
+    eligible_pages: list[dict] = []
+    eligible_documents: list[FetchedDocument] = []
+    for page in pages:
+        document = page_to_fetched_document(page)
+        if not is_eligible_for_answer(document.source):
+            continue
+        eligible_pages.append(page)
+        eligible_documents.append(document)
+    return eligible_pages, eligible_documents

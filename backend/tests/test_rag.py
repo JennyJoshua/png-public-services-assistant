@@ -374,3 +374,49 @@ def test_ranked_structured_passages_keep_section_path():
         and "Applicants must be registered" in item["text"]
         for item in results
     )
+
+
+
+def test_live_retrieval_excludes_pending_sources_before_model_generation(monkeypatch):
+    import asyncio
+    from app import rag
+
+    page = {
+        "institution": "PNGCIR",
+        "title": "NID registration information",
+        "url": "https://pngcir.gov.pg/nid-registration-information",
+        "final_url": "https://pngcir.gov.pg/nid-registration-information",
+        "content_type": "text/html; charset=utf-8",
+        "publication_date": None,
+        "last_checked_at": "2026-11-16T07:00:00+00:00",
+        "text": "Applicants must lodge the completed form at the registry office.",
+    }
+    async def pages():
+        return [page]
+
+    async def forbidden_generation(*args, **kwargs):
+        raise AssertionError("The model must not receive unreviewed source evidence")
+
+    monkeypatch.setattr(rag, "get_source_pages", pages)
+    monkeypatch.setattr(rag, "generate_answer", forbidden_generation)
+
+    result = asyncio.run(rag.retrieve_answer("How do I apply for an NID?"))
+
+    assert result["citations"] == []
+    assert result["evidence"] == []
+    assert "active, reviewed source" in result["answer"]
+    assert any("Unreviewed or unclassified" in warning for warning in result["warnings"])
+
+
+def test_eligibility_filter_excludes_pending_and_unclassified_registry_sources():
+    from app.retrieval_pipeline import filter_eligible_source_pages
+
+    page = {
+        "url": "https://pngcir.gov.pg/nid-registration-information",
+        "final_url": "https://pngcir.gov.pg/nid-registration-information",
+        "last_checked_at": "2026-11-16T07:00:00+00:00",
+        "text": "Applicants must lodge the completed form at the registry office.",
+    }
+    eligible_pages, eligible_documents = filter_eligible_source_pages([page])
+    assert eligible_pages == []
+    assert eligible_documents == []

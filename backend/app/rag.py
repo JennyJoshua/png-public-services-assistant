@@ -4,7 +4,7 @@ import re
 from bs4 import BeautifulSoup
 
 from app.model_provider import ModelProviderError, build_system_prompt, generate_answer, model_is_configured
-from app.retrieval_pipeline import build_evidence_records, page_to_fetched_document
+from app.retrieval_pipeline import build_evidence_records, filter_eligible_source_pages
 from app.source_content import assemble_sources_block, get_source_pages
 
 MAX_TEXT_CHARS = 24_000
@@ -303,7 +303,22 @@ def _rank_passages(question: str, pages: list[dict]) -> list[dict]:
 
 async def retrieve_answer(question: str, history: list[dict] | None = None) -> dict:
     """Use cached configured source pages, BM25 selection and the owner's prompt."""
-    available_pages = await get_source_pages()
+    fetched_pages = await get_source_pages()
+    available_pages, fetched_documents = filter_eligible_source_pages(fetched_pages)
+    if not available_pages:
+        return {
+            "answer": (
+                "I don't have confirmed information from an active, reviewed source yet. "
+                "Please contact the agency responsible for this service to confirm the current requirements."
+            ),
+            "answer_mode": "extractive",
+            "citations": [],
+            "evidence": [],
+            "warnings": [
+                "No configured sources currently meet the active-and-classified evidence policy. "
+                "Unreviewed or unclassified source pages are not used to generate answers."
+            ],
+        }
     passages = _rank_passages(question, available_pages)
     selected_urls: list[str] = []
     for passage in passages:
@@ -313,7 +328,6 @@ async def retrieve_answer(question: str, history: list[dict] | None = None) -> d
 
     sources_text = assemble_sources_block(available_pages, selected_urls)
     system_prompt = build_system_prompt(sources_text)
-    fetched_documents = [page_to_fetched_document(page) for page in available_pages]
     evidence_records = build_evidence_records(fetched_documents, passages)
 
     citations: list[dict] = []
