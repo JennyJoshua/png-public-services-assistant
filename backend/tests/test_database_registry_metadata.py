@@ -70,3 +70,11 @@ def test_database_metadata_cannot_override_configured_topic():
 
     with pytest.raises(RetrievalContractError, match="topic"):
         page_to_fetched_document(database_page(topic="Different topic"))
+
+
+def test_database_source_content_hash_must_match_immutable_version_record():
+    import pytest
+    from app.retrieval_contracts import RetrievalContractError
+
+    with pytest.raises(RetrievalContractError, match="recorded source-version hash"):
+        page_to_fetched_document(database_page(content_hash="0" * 64))
