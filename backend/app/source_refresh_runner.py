@@ -18,6 +18,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from app.source_assessment import AssessmentInput, AssessmentAction, assess_source
+from app.source_verification import verify_temporal_signals
 from app.source_content import USER_AGENT, _fetch_one
 from app.source_registry import SOURCES
 from app.source_store import SourceStoreError, get_source_pool
@@ -78,6 +79,11 @@ def _scope_statement(institution: str, topic: str) -> str:
 def _build_assessment(source: Any, page: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
     fetched_at = _parse_timestamp(str(page["last_checked_at"]))
     scope = _scope_statement(source.institution, source.title)
+    temporal = verify_temporal_signals(
+        str(page.get("text") or ""),
+        fetched_at=fetched_at,
+        metadata=page.get("metadata") if isinstance(page.get("metadata"), dict) else None,
+    )
     assessment_input = AssessmentInput(
         registered_url=source.url,
         final_url=str(page["final_url"]),
@@ -88,15 +94,17 @@ def _build_assessment(source: Any, page: dict[str, Any]) -> tuple[Any, dict[str,
         text=str(page.get("text") or ""),
         fetched_at=fetched_at,
         fetch_succeeded=True,
-        # Currentness and controlling-instrument evidence are intentionally
-        # false until the automated official-instrument verification stage exists.
-        currentness_verified=False,
+        # Date freshness and explicit supersession signals are checked
+        # deterministically. This does not prove legal validity.
+        currentness_verified=temporal.currentness_signal,
         scope_statement=scope,
         controlling_instrument_verified=False,
         corroborating_official_sources=(),
+        # Cross-document conflict checking remains incomplete until a
+        # configured controlling/corroborating instrument has actually been fetched.
         conflict_check_completed=False,
-        unresolved_conflict=False,
-        superseded=False,
+        unresolved_conflict=temporal.explicit_conflict_signal,
+        superseded=temporal.superseded,
     )
     audit_input = {
         "registered_url": source.url,
@@ -107,13 +115,17 @@ def _build_assessment(source: Any, page: dict[str, Any]) -> tuple[Any, dict[str,
         "content_type": str(page.get("content_type") or ""),
         "content_sha256": str(page["content_hash"]),
         "fetched_at": fetched_at.isoformat(),
-        "currentness_verified": False,
+        "publication_date": temporal.publication_date.isoformat() if temporal.publication_date else None,
+        "modified_date": temporal.modified_date.isoformat() if temporal.modified_date else None,
+        "currentness_verified": temporal.currentness_signal,
+        "temporal_verification_reasons": list(temporal.reasons),
         "scope_statement": scope,
         "controlling_instrument_verified": False,
         "corroborating_official_sources": [],
         "conflict_check_completed": False,
-        "unresolved_conflict": False,
-        "superseded": False,
+        "cross_document_check_reason": "No controlling/corroborating instrument fetch is configured yet.",
+        "unresolved_conflict": temporal.explicit_conflict_signal,
+        "superseded": temporal.superseded,
     }
     return assess_source(assessment_input), audit_input
 

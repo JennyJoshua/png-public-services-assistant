@@ -23,15 +23,21 @@ The run records a GitHub Actions run ID and URL for traceability. The workflow u
 
 This first runner does **not** claim that fetching an official-looking page proves it is current or conflict-free.
 
-At this stage it supplies:
+The verification layer now adds deterministic temporal checks:
 
-- a scope statement derived from the exact registered institution and topic;
-- no currentness verification;
-- no controlling-instrument verification;
-- no corroborating official-source list; and
-- `conflict_check_completed = false`.
+- extracts explicit publication/issue and modified dates from page text, HTML metadata, and HTTP Last-Modified headers;
+- checks whether the most recent explicit date is within a conservative five-year freshness window;
+- flags future-dated content;
+- detects explicit supersession, withdrawal, repeal, revocation, draft, and amendment/conflict markers; and
+- records the evidence and reasons in the immutable assessment audit input.
 
-Consequently, Class A service-requirement sources remain held until automated currentness and controlling-instrument verification are implemented. Class C contextual sources also remain held until the conflict-check stage is complete. This is intentional: the runner may collect and preserve candidate versions, but it cannot promote unverified material into live answers.
+A recent date is only a freshness signal. It does not prove that an Act, regulation, fee schedule, or policy remains legally in force.
+
+The cross-document verifier accepts only HTTPS comparator documents on the exact configured authority hosts. It records the exact comparator URLs, detects explicit supersession/conflict markers, and compares repeated labelled numeric values (for example, a stated fee or age threshold). An empty comparator set is never reported as a completed conflict check.
+
+The runner does **not yet fetch controlling/corroborating instruments**. Therefore it continues to set `conflict_check_completed = false` and `controlling_instrument_verified = false`. Class A sources remain held even when their page dates pass. Class C material is additionally blocked from activation if it contains high-impact claims; it is intended for context only. No source is promoted merely because a temporal signal passes.
+
+This is deliberate: the next integration stage must add an exact, reviewed instrument map per authority/topic, safely fetch those instruments, and feed their actual content into the cross-document verifier before the runner can set the conflict gate to complete.
 
 No human approval is required for routine refresh runs. The next implementation stage is the automated verification layer that can establish currentness, detect supersession/conflicts, and verify high-impact requirements against controlling official instruments and corroborating competent sources.
 

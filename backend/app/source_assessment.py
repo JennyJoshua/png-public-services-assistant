@@ -176,6 +176,12 @@ def assess_source(candidate: AssessmentInput) -> AssessmentDecision:
             profile is not None
             and profile.maximum_class is not SourceClass.APPROVED_AUTHORITATIVE
         ) or high_impact_verified,
+        # Contextual sources must never carry requirements or other high-impact claims.
+        "class_c_context_only": (
+            profile is None
+            or profile.maximum_class is not SourceClass.GENERAL_WEB
+            or not high_impact
+        ),
     }
     passed = sum(gates.values())
     confidence = round(passed / len(gates), 2)
@@ -200,9 +206,15 @@ def assess_source(candidate: AssessmentInput) -> AssessmentDecision:
     elif profile.maximum_class in {
         SourceClass.RECOGNISED_INSTITUTIONAL, SourceClass.GENERAL_WEB
     }:
-        # B/C sources can be activated only for their restricted contextual role.
-        action = AssessmentAction.ACTIVATE
-        source_class = profile.maximum_class
+        # Class C is strictly contextual and cannot carry requirements or
+        # other high-impact claims, even when the domain itself is trusted.
+        if profile.maximum_class is SourceClass.GENERAL_WEB and high_impact:
+            action = AssessmentAction.HOLD
+            source_class = SourceClass.UNVERIFIED_UNSAFE
+            reasons.append("class_c_source_contains_high_impact_claims")
+        else:
+            action = AssessmentAction.ACTIVATE
+            source_class = profile.maximum_class
     else:
         action = AssessmentAction.HOLD
         source_class = SourceClass.UNVERIFIED_UNSAFE
