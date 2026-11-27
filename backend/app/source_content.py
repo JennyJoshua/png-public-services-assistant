@@ -186,10 +186,13 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
                 chunks.append(chunk)
             raw = b"".join(chunks)
             content_type = response.headers.get("content-type", "").lower()
+            last_modified = response.headers.get("last-modified")
             final_url = str(response.url)
 
         is_pdf = "application/pdf" in content_type or urlparse(final_url).path.lower().endswith(".pdf")
-        metadata: dict[str, str] = {}
+        metadata: dict[str, str] = (
+            {"last-modified": last_modified} if last_modified else {}
+        )
         if is_pdf:
             text, title = _extract_pdf(raw)
         elif "text/html" in content_type or "application/xhtml" in content_type:
