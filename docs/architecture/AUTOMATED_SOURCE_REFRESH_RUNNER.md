@@ -33,7 +33,9 @@ The verification layer now adds deterministic temporal checks:
 
 A recent date is only a freshness signal. It does not prove that an Act, regulation, fee schedule, or policy remains legally in force.
 
-The cross-document verifier accepts only HTTPS comparator documents on the exact configured authority hosts. It records the exact comparator URLs, detects explicit supersession/conflict markers, and compares repeated labelled numeric values (for example, a stated fee or age threshold). An empty comparator set is never reported as a completed conflict check.
+The cross-document verifier accepts only HTTPS comparator documents on the exact configured authority hosts. It records the exact comparator URLs, detects explicit supersession/conflict markers, compares repeated labelled numeric values (for example, a stated fee or age threshold), and detects different years cited for the same named Act, Regulation, or Rules. An empty comparator set is never reported as a completed conflict check.
+
+An initial exact-URL verification plan is now configured for RTA driver licensing. It fetches the official Road Traffic Rules – Licensing of Drivers 2017 PDF and the RTA fee schedule page. This is intentionally a conservative pilot, not a general instrument map for every agency. The RTA Rules PDF contains references to the Road Traffic (Fees and Charges) Regulation 2015, while the RTA's published fee schedule identifies the 2017 Regulation. The verifier records this legal-reference-year mismatch as an unresolved conflict and holds the source. The RTA source also remains held unless its own currentness gate passes.
 
 The runner does **not yet fetch controlling/corroborating instruments**. Therefore it continues to set `conflict_check_completed = false` and `controlling_instrument_verified = false`. Class A sources remain held even when their page dates pass. Class C material is additionally blocked from activation if it contains high-impact claims; it is intended for context only. No source is promoted merely because a temporal signal passes.
 
