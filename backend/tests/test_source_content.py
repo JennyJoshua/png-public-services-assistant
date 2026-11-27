@@ -8,7 +8,7 @@ from app.source_content import (
     _redirect_is_allowed,
     assemble_sources_block,
 )
-from app.source_registry import SOURCES
+from app.source_registry import SOURCES, Source
 
 
 def test_html_extraction_removes_chrome_and_preserves_table_headers():
@@ -75,6 +75,36 @@ def test_fetch_one_returns_clean_html_and_status():
     assert status["fetch_succeeded"] is True
     assert status["usable_text"] is True
     assert status["text_chars"] > 40
+
+
+def test_fetch_one_supports_unregistered_mapped_instrument_urls():
+    instrument = Source(
+        institution="RTA",
+        title="Mapped verification document",
+        url="https://rta.gov.pg/instrument",
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            request=request,
+            headers={"content-type": "text/html; charset=utf-8"},
+            content=(
+                b"<html><head><title>Instrument</title></head><body><main>"
+                b"<h1>Official instrument</h1><p>This is the mapped official "
+                b"verification document and it contains enough text to extract.</p>"
+                b"</main></body></html>"
+            ),
+        )
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await _fetch_one(client, instrument)
+
+    page, status = asyncio.run(run())
+    assert page is not None
+    assert page["url"] == instrument.url
+    assert status["fetch_succeeded"] is True
 
 
 def test_fetch_one_reports_no_text_without_throwing():
