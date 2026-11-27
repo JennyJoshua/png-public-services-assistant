@@ -104,6 +104,32 @@ def _extract_html(raw: bytes) -> tuple[str, str]:
     return text, title
 
 
+def _extract_html_metadata(raw: bytes) -> dict[str, str]:
+    """Extract date-related metadata without treating it as legal authority."""
+    soup = BeautifulSoup(raw, "html.parser")
+    metadata: dict[str, str] = {}
+    for element in soup.find_all("meta"):
+        key = (
+            element.get("property")
+            or element.get("name")
+            or element.get("http-equiv")
+            or ""
+        ).strip().lower()
+        value = (element.get("content") or "").strip()
+        if key and value and any(term in key for term in ("date", "published", "modified", "updated")):
+            metadata[key] = value[:200]
+    for element in soup.find_all("time"):
+        value = (element.get("datetime") or element.get_text(" ", strip=True)).strip()
+        if not value:
+            continue
+        itemprop = (element.get("itemprop") or "").lower()
+        if itemprop in {"datepublished", "datecreated"}:
+            metadata.setdefault("datepublished", value[:200])
+        elif itemprop in {"datemodified", "dateupdated"}:
+            metadata.setdefault("datemodified", value[:200])
+    return metadata
+
+
 def _extract_pdf(raw: bytes) -> tuple[str, str]:
     reader = PdfReader(io.BytesIO(raw), strict=False)
     pages: list[str] = []
@@ -163,10 +189,12 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
             final_url = str(response.url)
 
         is_pdf = "application/pdf" in content_type or urlparse(final_url).path.lower().endswith(".pdf")
+        metadata: dict[str, str] = {}
         if is_pdf:
             text, title = _extract_pdf(raw)
         elif "text/html" in content_type or "application/xhtml" in content_type:
             text, title = _extract_html(raw)
+            metadata = _extract_html_metadata(raw)
         else:
             raise ValueError(f"Unsupported content type: {content_type or 'missing'}")
         if len(text) < 40:
@@ -181,6 +209,7 @@ async def _fetch_one(client: httpx.AsyncClient, source) -> tuple[dict | None, di
             "final_url": final_url,
             "content_type": content_type,
             "publication_date": None,
+            "metadata": metadata,
             "last_checked_at": fetched_at,
             "text": text,
             "content_hash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
