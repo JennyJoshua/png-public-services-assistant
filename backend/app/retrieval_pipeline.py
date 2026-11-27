@@ -15,6 +15,7 @@ from app.retrieval_contracts import (
     EvidencePassage,
     FetchedDocument,
     RetrievalContractError,
+    SourceClass,
     SourceRecord,
     SourceStatus,
     is_eligible_for_answer,
@@ -61,6 +62,9 @@ def page_to_fetched_document(page: dict) -> FetchedDocument:
     retrieved_at = _timestamp(str(page["last_checked_at"]))
     text = str(page["text"])
     content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    recorded_hash = page.get("content_hash")
+    if recorded_hash is not None and str(recorded_hash) != content_hash:
+        raise RetrievalContractError("Fetched text does not match the recorded source-version hash.")
 
     # The private database row is the live governance authority when present.
     # The registered URL must still match the code-owned exact seed list.
