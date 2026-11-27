@@ -37,7 +37,14 @@ def test_scope_statement_is_derived_from_registered_metadata():
 
 def test_class_a_candidate_is_held_until_currentness_and_instrument_checks_pass():
     source = next(item for item in SOURCES if item.institution == "PNGCIR")
-    candidate_page = page(final_url=source.url)
+    candidate_page = page(
+        final_url=source.url,
+        text=(
+            "This official service page explains the purpose and scope of the "
+            "public service for applicants in Papua New Guinea. Applicants must "
+            "confirm the current fee and eligibility requirements with the registry."
+        ),
+    )
 
     decision, audit = _build_assessment(source, candidate_page)
 
